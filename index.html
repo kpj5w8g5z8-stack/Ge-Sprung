@@ -121,6 +121,19 @@
   #reset-btn:hover{border-color:var(--loss);color:var(--loss);}
   .foot{font-size:12px;color:var(--muted);line-height:1.55;padding:10px 2px 0;}
   .foot b{color:var(--ink);}
+
+  .dateinp{width:100%;background:var(--field);border:1px solid transparent;border-radius:11px;padding:12px;
+    font-size:15px;font-family:var(--sans);color:var(--ink);font-weight:600;}
+  .dateinp:focus{border-color:var(--now);background:#fff;outline:none;}
+  #standstill{padding:13px 16px;border-top:1px solid var(--hair);font-size:13px;color:var(--muted);line-height:1.5;}
+  .scen{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--hair);border-radius:11px;padding:10px 12px;}
+  .scen-name{font-size:14px;font-weight:600;word-break:break-word;}
+  .scen-meta{font-size:11.5px;color:var(--muted);margin-top:2px;}
+  .scen-act{display:flex;gap:8px;flex:none;}
+  .scen-act button{border:1px solid var(--hair);background:#fff;border-radius:9px;padding:8px 12px;font-size:12.5px;
+    font-weight:600;cursor:pointer;font-family:var(--sans);color:var(--ink);}
+  .scen-act button:hover{border-color:var(--now);color:var(--now);}
+  .scen-act button.del:hover{border-color:var(--loss);color:var(--loss);}
 </style>
 </head>
 <body>
@@ -156,6 +169,11 @@
     </div>
     <div class="lvlsel"><label id="lbl-varval" for="varval">Variabler Anteil (%)</label>
       <div class="field"><span class="pre" id="varval-pre" style="display:none">€</span><input id="varval" type="number" inputmode="decimal" min="0" step="0.5"><span class="post" id="varval-post">%</span></div>
+    </div>
+
+    <div class="lvlsel"><label for="last-raise">Letzte Gehaltserhöhung am</label>
+      <input id="last-raise" type="date" class="dateinp">
+      <div class="hint" id="since-hint" style="margin-top:6px;text-align:left;color:var(--muted);font-family:var(--mono);font-size:12px;"></div>
     </div>
 
     <div class="kv"><span class="kk">Jahresgesamtgehalt (inkl. Benefit)</span><span class="vv" id="bc-gesamt">–</span></div>
@@ -250,6 +268,7 @@
         <div class="cell"><div class="k">Gleichstand erreicht</div><div class="v" id="r-break">–</div></div>
         <div class="cell"><div class="k">Nötige spätere Erhöhung</div><div class="v" id="r-need">–</div></div>
       </div>
+      <div id="standstill"></div>
     </div>
 
     <div class="split">
@@ -284,6 +303,21 @@
     </div>
   </section>
 
+  <!-- ============ SZENARIEN ============ -->
+  <section class="card">
+    <div class="eyebrow">Szenarien</div>
+    <h2>Eingaben speichern & wieder laden</h2>
+    <p class="cap">Speichere deine aktuellen Eingaben unter einem Namen. Du kannst beliebig viele behalten und
+      jederzeit wieder laden – sie werden nicht mehr überschrieben. Alles bleibt ausschließlich lokal in diesem Browser
+      auf deinem Gerät; niemand sonst hat Zugriff.</p>
+    <div class="lvlgrid" style="grid-template-columns:1fr auto;align-items:end;gap:10px;">
+      <div class="lvlsel" style="margin:0;"><label for="scen-name">Name des Szenarios</label>
+        <input id="scen-name" type="text" class="dateinp" placeholder="z. B. Stand heute, Forderung Level 3 …" maxlength="60"></div>
+      <button class="setbtn" id="scen-save" style="margin-top:0;width:auto;padding:12px 18px;white-space:nowrap;border-color:var(--now);background:#F0FBF7;color:#0B7A55;">Speichern</button>
+    </div>
+    <div id="scen-list" style="margin-top:14px;display:flex;flex-direction:column;gap:8px;"></div>
+  </section>
+
   <p class="foot">Modell: Gesamtgehalt (Fix + Variabel + Benefit) je Stufe, plus optionale kollektive Tariferhöhung
     (wirkt auf beide Wege gleich), Brutto, ohne Steuerprogression. Es geht um die <b>Logik des Wartens</b> –
     keine Nettoprognose. Bandwerte, Benefits und %-Bandbreiten stammen aus den Unternehmens­tabellen.
@@ -301,7 +335,8 @@
   var DEFAULTS = {
     curLevel:'1', tgtLevel:'2',
     total:55000, varMode:'pct', varPct:10, varEur:5400,
-    rn:6000, rl:6000, wait:12, coll:2.5, collDelay:1, hz:3
+    rn:6000, rl:6000, wait:12, coll:2.5, collDelay:1, hz:3,
+    lastRaise:''
   };
   var state={};
   for(var dk in DEFAULTS){ if(DEFAULTS.hasOwnProperty(dk)) state[dk]=DEFAULTS[dk]; }
@@ -377,16 +412,39 @@
   function cumOf(arr,m){ if(m<=0)return arr[0]; if(m>=arr.length-1)return arr[arr.length-1];
     var lo=Math.floor(m); return arr[lo]+(arr[lo+1]-arr[lo])*(m-lo); }
 
+  function monthsSince(dateStr){
+    if(!dateStr) return null;
+    var d=new Date(dateStr); if(isNaN(d.getTime())) return null;
+    var now=new Date();
+    var m=(now.getFullYear()-d.getFullYear())*12 + (now.getMonth()-d.getMonth());
+    if(now.getDate()<d.getDate()) m-=1;
+    return Math.max(0,m);
+  }
+
   // ================= RENDER =================
   function render(){
     var c=calc(), b=computeBand();
     renderIst(b);
     renderVerdict(c);
+    renderStandstill();
     renderDev(b);
     drawCumulative(c);
     renderTable(c);
     drawSalary(c);
     save();
+  }
+
+  function renderStandstill(){
+    var ms=monthsSince(state.lastRaise);
+    $('since-hint').textContent = (ms===null)
+      ? 'Datum wählen, um deinen bisherigen Stillstand zu sehen.'
+      : ('Das sind '+ms+' Monate ohne Erhöhung.');
+    var st=$('standstill');
+    if(ms===null){ st.style.display='none'; st.innerHTML=''; return; }
+    st.style.display='';
+    var tot=ms+(state.wait||0);
+    st.innerHTML='Du wartest bereits <b style="color:var(--ink)">'+ms+' Monate</b> auf eine Erhöhung. '+
+      'Mit „später" ('+(state.wait||0)+' Mon. warten) wären es zusammen <b style="color:var(--ink)">'+tot+' Monate</b> ohne Erhöhung.';
   }
 
   function badge(kind,text){ var d=(kind==='info')?'':'<span class="dot"></span>';
@@ -651,6 +709,7 @@
   $('rl').addEventListener('input',function(){ state.rl=num(this); render(); });
   $('coll').addEventListener('input',function(){ state.coll=num(this); render(); });
   $('varval').addEventListener('input',function(){ if(state.varMode==='eur') state.varEur=num(this); else state.varPct=num(this); render(); });
+  $('last-raise').addEventListener('change',function(){ state.lastRaise=this.value||''; render(); });
 
   // Variabler-Anteil-Umschalter (€/%)
   function applyVarModeUI(){
@@ -694,6 +753,7 @@
     $('total').value=Math.round(state.total);
     $('rn').value=Math.round(state.rn); $('rl').value=Math.round(state.rl);
     $('coll').value=state.coll;
+    $('last-raise').value=state.lastRaise||'';
     applyVarModeUI();
     markChip('wait-chips','data-wait',state.wait);
     markChip('hz-chips','data-hz',state.hz);
@@ -706,9 +766,49 @@
     applyStateToUI(); render();
   });
 
+  // ---- Szenarien (mehrere benannte Stände, lokal) ----
+  var SCEN_KEY='gehaltsrechner.v2.scen';
+  function loadScen(){ try{ var s=localStorage.getItem(SCEN_KEY); return s?JSON.parse(s):[]; }catch(e){ return []; } }
+  function persistScen(list){ try{ localStorage.setItem(SCEN_KEY, JSON.stringify(list)); }catch(e){} }
+  function snapshot(){ var o={}; for(var k in DEFAULTS){ if(DEFAULTS.hasOwnProperty(k)) o[k]=state[k]; } return o; }
+  function saveScenario(name){
+    var list=loadScen();
+    name=(name||'').trim() || ('Szenario '+(list.length+1));
+    list.push({ id:Date.now(), name:name, ts:Date.now(), data:snapshot() });
+    persistScen(list); renderScenList();
+  }
+  function deleteScenario(id){ persistScen(loadScen().filter(function(x){return x.id!==id;})); renderScenList(); }
+  function applyScenario(id){
+    var sc=loadScen().filter(function(x){return x.id===id;})[0]; if(!sc) return;
+    for(var k in DEFAULTS){ if(DEFAULTS.hasOwnProperty(k) && sc.data[k]!=null) state[k]=sc.data[k]; }
+    applyStateToUI(); render();
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  function renderScenList(){
+    var list=loadScen(), wrap=$('scen-list'); wrap.innerHTML='';
+    if(!list.length){ var p=document.createElement('p'); p.className='cap'; p.style.margin='0';
+      p.textContent='Noch keine Szenarien gespeichert.'; wrap.appendChild(p); return; }
+    list.slice().reverse().forEach(function(sc){
+      var row=document.createElement('div'); row.className='scen';
+      var info=document.createElement('div');
+      var nm=document.createElement('div'); nm.className='scen-name'; nm.textContent=sc.name;
+      var meta=document.createElement('div'); meta.className='scen-meta';
+      var d=new Date(sc.ts);
+      meta.textContent='gespeichert '+d.toLocaleDateString('de-DE')+' · '+d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr';
+      info.appendChild(nm); info.appendChild(meta);
+      var act=document.createElement('div'); act.className='scen-act';
+      var bL=document.createElement('button'); bL.textContent='Laden'; bL.onclick=function(){ applyScenario(sc.id); };
+      var bD=document.createElement('button'); bD.textContent='Löschen'; bD.className='del';
+      bD.onclick=function(){ if(confirm('Szenario „'+sc.name+'" löschen?')) deleteScenario(sc.id); };
+      act.appendChild(bL); act.appendChild(bD);
+      row.appendChild(info); row.appendChild(act); wrap.appendChild(row);
+    });
+  }
+  $('scen-save').addEventListener('click',function(){ saveScenario($('scen-name').value); $('scen-name').value=''; });
+
   var rt; window.addEventListener('resize',function(){ clearTimeout(rt); rt=setTimeout(render,120); });
 
-  load(); applyStateToUI(); render();
+  load(); applyStateToUI(); renderScenList(); render();
 })();
 </script>
 </body>
