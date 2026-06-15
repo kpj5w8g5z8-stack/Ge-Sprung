@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Warten oder jetzt? — Gehaltsrechner</title>
+<style>
+  :root{
+    --bg:#F4F6F9;
+    --panel:#FFFFFF;
+    --ink:#141E2C;
+    --muted:#6A788E;
+    --hair:#E4E8EF;
+    --field:#F0F3F7;
+    --now:#0FA67E;        /* Pfad: jetzt befördert */
+    --later:#7C8DA8;      /* Pfad: später befördert */
+    --loss:#E2452A;       /* Rückstand / verlorenes Geld */
+    --gain:#16A34A;       /* Vorsprung nach Break-even */
+    --mark:#D9971A;       /* Break-even-Markierung */
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono","Roboto Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    -webkit-text-size-adjust:100%;}
+  body{padding:env(safe-area-inset-top) 16px calc(env(safe-area-inset-bottom) + 32px);}
+  .wrap{max-width:680px;margin:0 auto;}
+
+  header{padding:22px 0 8px;}
+  .eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+    font-weight:600;}
+  h1{font-size:23px;line-height:1.2;margin:8px 0 6px;font-weight:700;letter-spacing:-.01em;}
+  .sub{color:var(--muted);font-size:14px;line-height:1.5;margin:0;}
+
+  /* ---- Ergebnis-Leiste ---- */
+  .verdict{margin:18px 0;border:1px solid var(--hair);border-radius:16px;overflow:hidden;
+    background:var(--panel);}
+  .verdict .lead{padding:18px 18px 16px;background:linear-gradient(180deg,#FFF6F3,#FFFFFF);
+    border-bottom:1px solid var(--hair);}
+  .lead .label{font-size:13px;color:var(--muted);font-weight:600;margin-bottom:6px;}
+  .lead .big{font-family:var(--mono);font-size:34px;font-weight:600;letter-spacing:-.02em;
+    color:var(--loss);font-variant-numeric:tabular-nums;line-height:1;}
+  .lead .note{font-size:13px;color:var(--muted);margin-top:9px;line-height:1.45;}
+  .lead .note b{color:var(--ink);}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;}
+  .cell{padding:14px 18px;}
+  .cell + .cell{border-left:1px solid var(--hair);}
+  .cell .k{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:5px;}
+  .cell .v{font-family:var(--mono);font-size:18px;font-weight:600;font-variant-numeric:tabular-nums;
+    letter-spacing:-.01em;line-height:1.2;}
+  .cell .v small{font-size:12px;color:var(--muted);font-weight:500;}
+
+  /* ---- Eingaben ---- */
+  .inputs{background:var(--panel);border:1px solid var(--hair);border-radius:16px;
+    padding:6px 18px 16px;margin-bottom:18px;}
+  .row{padding:14px 0;border-bottom:1px solid var(--hair);}
+  .row:last-child{border-bottom:none;}
+  .row .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:9px;}
+  .row label{font-size:14px;font-weight:600;}
+  .row .hint{font-size:12px;color:var(--muted);font-family:var(--mono);font-variant-numeric:tabular-nums;}
+  .field{display:flex;align-items:center;background:var(--field);border-radius:11px;
+    padding:0 14px;border:1px solid transparent;transition:border-color .15s;}
+  .field:focus-within{border-color:var(--now);background:#fff;}
+  .field span.pre{color:var(--muted);font-size:15px;}
+  .field input{flex:1;border:none;background:transparent;font-family:var(--mono);
+    font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;padding:13px 8px;
+    color:var(--ink);width:100%;outline:none;-moz-appearance:textfield;}
+  .field input::-webkit-outer-spin-button,.field input::-webkit-inner-spin-button{
+    -webkit-appearance:none;margin:0;}
+  .field span.post{color:var(--muted);font-size:14px;}
+
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+  .chip{flex:1;min-width:60px;border:1px solid var(--hair);background:#fff;color:var(--ink);
+    border-radius:10px;padding:10px 6px;font-size:13px;font-weight:600;cursor:pointer;
+    font-family:var(--mono);transition:all .12s;text-align:center;}
+  .chip:hover{border-color:var(--later);}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+
+  .seg{display:flex;background:var(--field);border-radius:11px;padding:4px;gap:4px;}
+  .seg button{flex:1;border:none;background:transparent;border-radius:8px;padding:11px 8px;
+    font-size:14px;font-weight:600;color:var(--muted);cursor:pointer;font-family:var(--sans);
+    transition:all .14s;}
+  .seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(20,30,44,.10);}
+
+  .store{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+  #store-status{font-size:12.5px;color:var(--muted);transition:color .2s;}
+  #store-status.flash{color:var(--now);font-weight:600;}
+  #reset-btn{border:1px solid var(--hair);background:#fff;color:var(--muted);border-radius:9px;
+    padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);}
+  #reset-btn:hover{border-color:var(--loss);color:var(--loss);}
+
+  /* ---- Level & Gehaltsband ---- */
+  .lvlgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:8px 0;}
+  .lvlsel label{display:block;font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px;}
+  select.lvl{width:100%;background:var(--field);border:1px solid transparent;border-radius:11px;
+    padding:12px 12px;font-size:15px;font-weight:600;font-family:var(--sans);color:var(--ink);}
+  select.lvl:focus{border-color:var(--now);background:#fff;outline:none;}
+  .kv{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13px;
+    padding:8px 2px;border-bottom:1px solid var(--hair);}
+  .kv:last-of-type{border-bottom:none;}
+  .kv .kk{color:var(--muted);}
+  .kv .vv{font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums;}
+  .badge{display:flex;align-items:flex-start;gap:8px;border-radius:11px;padding:11px 13px;
+    font-size:13px;font-weight:600;line-height:1.4;}
+  .badge.ok{background:#ECFBF3;color:#0B7A55;}
+  .badge.warn{background:#FDECE7;color:#B5310F;}
+  .badge.info{background:#EEF2F8;color:#3B4D66;}
+  .badge .dot{width:9px;height:9px;border-radius:50%;background:currentColor;flex:none;margin-top:4px;}
+  .rngbar{position:relative;height:12px;border-radius:6px;background:var(--field);margin:10px 0 5px;}
+  .rngbar .allow{position:absolute;top:0;bottom:0;background:rgba(15,166,126,.28);border-radius:6px;}
+  .rngbar .mk{position:absolute;top:-3px;width:3px;height:18px;border-radius:2px;background:var(--ink);}
+  .rngbar.bad .mk{background:var(--loss);}
+  .rngscale{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);font-family:var(--mono);}
+
+  .setbtn{width:100%;margin-top:11px;border:1px dashed var(--mark);background:#FFFBF2;
+    color:#8A5E07;border-radius:11px;padding:12px;font-size:13px;font-weight:600;cursor:pointer;
+    transition:background .12s;}
+  .setbtn:hover{background:#FFF6E2;}
+  .setbtn:disabled{opacity:.4;cursor:not-allowed;}
+
+  /* ---- Diagramme ---- */
+  .card{background:var(--panel);border:1px solid var(--hair);border-radius:16px;
+    padding:16px 14px 10px;margin-bottom:16px;}
+  .card h2{font-size:14px;margin:0 0 2px;font-weight:700;padding:0 4px;}
+  .card .cap{font-size:12px;color:var(--muted);margin:0 0 8px;padding:0 4px;line-height:1.4;}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;padding:8px 4px 2px;font-size:12.5px;color:var(--muted);}
+  .legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;
+    vertical-align:-1px;}
+  canvas{display:block;width:100%;touch-action:pan-y;}
+
+  .foot{font-size:12px;color:var(--muted);line-height:1.55;padding:4px 4px 0;}
+  .foot b{color:var(--ink);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Beförderung · jetzt vs. später</div>
+    <h1>Was kostet dich das Warten wirklich?</h1>
+    <p class="sub">Jeder Monat auf der alten Stufe ist Geld, das nie wiederkommt. Diese Differenz
+      muss eine spätere Erhöhung erst aufholen – gib deine Zahlen ein und sieh, ob sie das überhaupt schafft.</p>
+  </header>
+
+  <!-- Ergebnis -->
+  <section class="verdict">
+    <div class="lead">
+      <div class="label">Rückstand bis zur späteren Erhöhung</div>
+      <div class="big" id="r-loss">–</div>
+      <div class="note" id="r-verdict">–</div>
+    </div>
+    <div class="grid2">
+      <div class="cell">
+        <div class="k">Gleichstand erreicht</div>
+        <div class="v" id="r-break">–</div>
+      </div>
+      <div class="cell">
+        <div class="k">Nötige spätere Erhöhung</div>
+        <div class="v" id="r-need">–</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Eingaben -->
+  <section class="inputs">
+    <div class="row">
+      <div class="top"><label>Gehalt angeben als</label></div>
+      <div class="seg" id="mode-seg">
+        <button data-mode="month" class="on">Monatsbrutto</button>
+        <button data-mode="year">Jahresbrutto</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="top"><label for="s0" id="lbl-s0">Aktuelles Brutto-Monatsgehalt</label></div>
+      <div class="field"><span class="pre">€</span><input id="s0" type="number" inputmode="decimal" value="4000" min="0" step="50"><span class="post unit-per">/ Monat</span></div>
+    </div>
+
+    <div class="row">
+      <div class="top"><label for="rn">Erhöhung, wenn JETZT befördert</label><span class="hint" id="rn-pct"></span></div>
+      <div class="field"><span class="pre">+€</span><input id="rn" type="number" inputmode="decimal" value="400" min="0" step="25"><span class="post unit-per">/ Monat</span></div>
+    </div>
+
+    <div class="row">
+      <div class="top"><label>Wie lange soll ich warten?</label><span class="hint" id="wait-lbl"></span></div>
+      <div class="chips" id="wait-chips">
+        <button class="chip" data-wait="6">6 Mon.</button>
+        <button class="chip" data-wait="12">12 Mon.</button>
+        <button class="chip" data-wait="18">18 Mon.</button>
+        <button class="chip" data-wait="24">24 Mon.</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="top"><label for="rl">Erhöhung, wenn SPÄTER befördert</label><span class="hint" id="rl-pct"></span></div>
+      <div class="field"><span class="pre">+€</span><input id="rl" type="number" inputmode="decimal" value="400" min="0" step="25"><span class="post unit-per">/ Monat</span></div>
+      <button class="setbtn" id="set-break">↑ Auf „gerade noch lohnenswert" setzen (Gleichstand am Ende des Zeitraums)</button>
+    </div>
+
+    <div class="row">
+      <div class="top"><label for="coll">Kollektive Tariferhöhung</label><span class="hint" id="coll-hint"></span></div>
+      <div class="field"><span class="pre">+</span><input id="coll" type="number" inputmode="decimal" value="2.5" min="0" step="0.5"><span class="post">% / Jahr</span></div>
+      <div class="top" style="margin:13px 0 9px;"><label>Pausiert noch (Start wieder in …)</label><span class="hint" id="coll-delay-lbl"></span></div>
+      <div class="chips" id="coll-chips">
+        <button class="chip" data-delay="0">0 J.</button>
+        <button class="chip" data-delay="1">1 J.</button>
+        <button class="chip" data-delay="2">2 J.</button>
+        <button class="chip" data-delay="3">3 J.</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="top"><label>Betrachtungszeitraum</label><span class="hint" id="hz-lbl"></span></div>
+      <div class="chips" id="hz-chips">
+        <button class="chip" data-hz="2">2 Jahre</button>
+        <button class="chip" data-hz="3">3 Jahre</button>
+        <button class="chip" data-hz="5">5 Jahre</button>
+        <button class="chip" data-hz="10">10 Jahre</button>
+      </div>
+    </div>
+    <div class="row store">
+      <span id="store-status">Wird lokal auf diesem Gerät gespeichert</span>
+      <button id="reset-btn" type="button">Zurücksetzen</button>
+    </div>
+  </section>
+
+  <!-- Level & Gehaltsband -->
+  <section class="card" id="band-card">
+    <h2>Dein Level & Gehaltsband</h2>
+    <p class="cap">Alle Werte p. a. in EUR (Fest + Variabel = Zielgehalt). Prüft, ob du im Band deines Levels liegst.</p>
+
+    <div class="lvlgrid">
+      <div class="lvlsel"><label for="cur-level">Aktuelles Level</label>
+        <select id="cur-level" class="lvl"></select></div>
+      <div class="lvlsel"><label for="tgt-level">Ziel-Level</label>
+        <select id="tgt-level" class="lvl"></select></div>
+    </div>
+
+    <div class="lvlgrid">
+      <div class="lvlsel"><label for="fix">Fixgehalt (p. a.)</label>
+        <div class="field"><span class="pre">€</span><input id="fix" type="number" inputmode="decimal" value="48000" min="0" step="500"></div></div>
+      <div class="lvlsel"><label for="vari">Variables Gehalt (p. a.)</label>
+        <div class="field"><span class="pre">€</span><input id="vari" type="number" inputmode="decimal" value="6000" min="0" step="500"></div></div>
+    </div>
+
+    <div class="kv"><span class="kk">Zielgehalt gesamt</span><span class="vv" id="bc-total">–</span></div>
+    <div class="kv"><span class="kk">Variabler Anteil</span><span class="vv" id="bc-share">–</span></div>
+    <div class="kv"><span class="kk">Benefit Account</span><span class="vv" id="bc-benefit">–</span></div>
+
+    <div id="bc-status" style="display:flex;flex-direction:column;gap:8px;margin:13px 0 4px;"></div>
+
+    <p class="cap" style="margin:16px 0 0;">Variabler Anteil vs. erlaubte Bandbreite</p>
+    <div class="rngbar" id="share-bar"><div class="allow" id="share-allow"></div><div class="mk" id="share-mk"></div></div>
+    <div class="rngscale"><span>0 %</span><span>40 %</span></div>
+
+    <p class="cap" style="margin:18px 0 6px;">Gehaltsbänder je Level (k €) — dein Gesamtgehalt als Linie</p>
+    <canvas id="cband"></canvas>
+    <div class="legend">
+      <span><i style="background:var(--now)"></i>Aktuelles Level</span>
+      <span><i style="background:var(--mark)"></i>Ziel-Level</span>
+      <span><i style="background:#C9D2DE"></i>andere Level</span>
+    </div>
+
+    <button class="setbtn" id="band-take" style="border-color:var(--now);background:#F0FBF7;color:#0B7A55;">↑ Zielgehalt als „aktuelles Gehalt" in den Vergleich übernehmen</button>
+  </section>
+
+  <!-- Chart 1: Gehalt -->
+  <section class="card">
+    <h2 id="c1-title">Monatsgehalt über die Zeit</h2>
+    <p class="cap">Die beiden Wege im direkten Vergleich. Sieht harmlos aus – die spätere Kurve
+      springt ja irgendwann höher. Der ehrliche Vergleich kommt aber erst darunter.</p>
+    <canvas id="c1"></canvas>
+    <div class="legend">
+      <span><i style="background:var(--now)"></i>Jetzt befördert</span>
+      <span><i style="background:var(--later)"></i>Später befördert</span>
+    </div>
+  </section>
+
+  <!-- Chart 2: kumuliert -->
+  <section class="card">
+    <h2>Aufsummiertes Gesamtgehalt — hier zählt's</h2>
+    <p class="cap">Jeder Punkt = alles, was du bis dahin insgesamt verdient hast. Die rote Fläche
+      ist dein Rückstand: Geld, das der spätere Weg erst wieder einholen muss.</p>
+    <canvas id="c2"></canvas>
+    <div class="legend">
+      <span><i style="background:var(--now)"></i>Jetzt befördert</span>
+      <span><i style="background:var(--later)"></i>Später befördert</span>
+      <span><i style="background:var(--loss)"></i>Rückstand</span>
+      <span><i style="background:var(--mark)"></i>Gleichstand</span>
+    </div>
+  </section>
+
+  <p class="foot">Modell: Gehalt je Stufe, plus optionale kollektive Tariferhöhung (wirkt auf beide Wege gleich), Brutto, ohne Steuerprogression.
+    Es geht um die <b>reine Logik des Wartens</b> – nicht um eine Nettoprognose. Alle Eingaben bleiben
+    <b>ausschließlich lokal auf deinem Gerät</b> gespeichert (Browser-Speicher), nichts wird hochgeladen oder versendet.</p>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+  var startYear = new Date().getFullYear();
+
+  var DEFAULTS = { s0:4000, rn:400, rl:400, wait:12, hz:3, mode:'month', coll:2.5, collDelay:1,
+                   curLevel:'1', tgtLevel:'2', fix:48000, vari:6000 };
+  var state = {};
+  for(var dk in DEFAULTS){ if(DEFAULTS.hasOwnProperty(dk)) state[dk]=DEFAULTS[dk]; }
+
+  // Gehaltsbänder je Level (Gesamt = Fest+Variabel, in k EUR p.a.) + erlaubter variabler Anteil (%)
+  var LEVELS = [
+    { id:'E', label:'Level E', min:30,    max:60,  benefit:1000,  varMin:0,  varMax:20 },
+    { id:'1', label:'Level 1', min:45,    max:75,  benefit:1000,  varMin:0,  varMax:20 },
+    { id:'2', label:'Level 2', min:59,    max:90,  benefit:2000,  varMin:5,  varMax:25 },
+    { id:'3', label:'Level 3', min:74,    max:110, benefit:3000,  varMin:5,  varMax:25 },
+    { id:'4', label:'Level 4', min:87,    max:140, benefit:6000,  varMin:10, varMax:30 },
+    { id:'5', label:'Level 5', min:107,   max:180, benefit:8500,  varMin:15, varMax:35 },
+    { id:'6', label:'Level 6', min:138.5, max:240, benefit:10000, varMin:20, varMax:40 }
+  ];
+  function levelById(id){ for(var i=0;i<LEVELS.length;i++){ if(LEVELS[i].id===id) return LEVELS[i]; } return null; }
+
+  // Einheiten-Helfer: intern wird immer monatlich gerechnet.
+  var UNITS = {
+    month:{ f:1,  per:'/ Monat', short:'/ Mon',  salaryLabel:'Aktuelles Brutto-Monatsgehalt', chartTitle:'Monatsgehalt über die Zeit' },
+    year: { f:12, per:'/ Jahr',  short:'/ Jahr', salaryLabel:'Aktuelles Brutto-Jahresgehalt', chartTitle:'Jahresgehalt über die Zeit' }
+  };
+  function U(){ return UNITS[state.mode]; }
+  function F(){ return U().f; }
+
+  var fmtEur = new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR',maximumFractionDigits:0});
+  var fmtEur1 = new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR',minimumFractionDigits:0,maximumFractionDigits:0});
+  function eur(v){ return fmtEur.format(Math.round(v)); }
+  function pct(part, whole){ if(!whole) return '–'; return (part/whole*100).toLocaleString('de-DE',{maximumFractionDigits:1})+' %'; }
+
+  // ---- Kennzahlen ----
+  // Intern wird Monat für Monat aufsummiert. Die Tariferhöhung (kollektiv) wirkt
+  // auf BEIDE Wege gleich: ab dem Tarifstart steigt das Gehalt jedes Jahr um g %.
+  function calc(){
+    var s0=state.s0, rn=state.rn, rl=state.rl, w=state.wait, H=state.hz*12;
+    var sNow=s0+rn, sLater=s0+rl;
+    var g=(state.coll||0)/100, D=state.collDelay||0;
+
+    var maxM=Math.max(H,1200);
+    var arrNow=new Array(maxM+1), arrWait=new Array(maxM+1);
+    var salNowArr=new Array(maxM+1), salWaitArr=new Array(maxM+1);
+    arrNow[0]=0; arrWait[0]=0; salNowArr[0]=sNow; salWaitArr[0]=s0;
+    var cn=0, cw=0, fAll=0, fAfter=0;
+    for(var j=1;j<=maxM;j++){
+      // abgeschlossene Jahre zu Beginn von Monat j; Tariferhöhung greift, sobald > D
+      var f=Math.pow(1+g, Math.max(0, Math.floor((j-1)/12) - D));
+      var sN=sNow*f;
+      var sW=(j<=w ? s0 : sLater)*f;
+      cn+=sN; cw+=sW;
+      arrNow[j]=cn; arrWait[j]=cw; salNowArr[j]=sN; salWaitArr[j]=sW;
+      if(j<=H){ fAll+=f; if(j>w) fAfter+=f; }
+    }
+
+    var loss=arrNow[w]-arrWait[w]; // Rückstand bis zur späteren Erhöhung
+    // Break-even (Gleichstand), monatsgenau interpoliert
+    var breakMonth=null;
+    if(rl>rn){
+      for(var m=Math.max(1,w); m<=maxM; m++){
+        if(arrWait[m]>=arrNow[m]){
+          var d0=arrNow[m-1]-arrWait[m-1], d1=arrNow[m]-arrWait[m];
+          breakMonth=(m-1)+((d0===d1)?0:d0/(d0-d1));
+          break;
+        }
+      }
+    }
+    // nötige spätere Erhöhung, um am Ende des Zeitraums gleichzuziehen
+    var needLater=(H>w && fAfter>0) ? rn*fAll/fAfter : Infinity;
+    var diffEnd=arrNow[H]-arrWait[H];
+
+    return {s0:s0,rn:rn,rl:rl,w:w,H:H,sNow:sNow,sLater:sLater,g:g,D:D,
+      loss:loss, breakMonth:breakMonth, needLater:needLater, diffEnd:diffEnd,
+      arrNow:arrNow, arrWait:arrWait, salNowArr:salNowArr, salWaitArr:salWaitArr};
+  }
+
+  // Wert eines Kumulativ-Arrays bei (auch gebrochenem) Monat m
+  function cumOf(arr, m){
+    if(m<=0) return arr[0];
+    if(m>=arr.length-1) return arr[arr.length-1];
+    var lo=Math.floor(m);
+    return arr[lo] + (arr[lo+1]-arr[lo])*(m-lo);
+  }
+
+  function monthLabel(m){
+    var y = startYear + Math.floor(m/12);
+    var mm = m%12;
+    return (mm===0) ? ('Anf. '+y) : (Math.round(m)+' Mon.');
+  }
+
+  function render(){
+    var c = calc();
+    var f = F(), u = U();
+
+    // Einheiten-Beschriftungen aktualisieren
+    Array.prototype.forEach.call(document.querySelectorAll('.unit-per'),function(el){ el.textContent = u.per; });
+    $('lbl-s0').textContent = u.salaryLabel;
+    $('c1-title').textContent = u.chartTitle;
+
+    // Hinweise an Eingaben (Zielgehalt in gewählter Einheit)
+    $('rn-pct').textContent = '≈ '+pct(c.rn,c.s0)+'  ('+eur(c.sNow*f)+' '+u.short+')';
+    $('rl-pct').textContent = '≈ '+pct(c.rl,c.s0)+'  ('+eur(c.sLater*f)+' '+u.short+')';
+    $('wait-lbl').textContent = c.w+' Monate';
+    $('hz-lbl').textContent = state.hz+' Jahre';
+
+    // Tarif-Hinweise
+    var firstYear = startYear + (c.D+1);
+    $('coll-hint').textContent = (c.g>0)
+      ? ('+'+eur(c.s0*c.g*f)+' '+u.short+' je Runde')
+      : 'deaktiviert';
+    $('coll-delay-lbl').textContent = (c.g<=0)
+      ? '—'
+      : ((c.D===0?'läuft jährlich':'pausiert '+c.D+' J.')+' · ab '+firstYear);
+
+    // Ergebnis
+    $('r-loss').textContent = eur(c.loss);
+    $('r-need').innerHTML = isFinite(c.needLater)
+      ? (eur(c.needLater*f)+' <small>'+u.short+' · '+pct(c.needLater,c.s0)+'</small>')
+      : '–';
+
+    // Break-even-Text
+    var bEl = $('r-break');
+    if(c.rl <= c.rn){
+      bEl.innerHTML = 'nie <small>im Modell</small>';
+      bEl.style.color = 'var(--loss)';
+    } else if(c.breakMonth===null || c.breakMonth > c.H){
+      bEl.innerHTML = '> '+state.hz+' J. <small>außerhalb</small>';
+      bEl.style.color = 'var(--mark)';
+    } else {
+      var bm = Math.ceil(c.breakMonth);
+      bEl.innerHTML = 'Monat '+bm+' <small>'+(bm/12).toLocaleString('de-DE',{maximumFractionDigits:1})+' J.</small>';
+      bEl.style.color = 'var(--ink)';
+    }
+
+    // Urteil
+    var v = $('r-verdict');
+    if(c.rl < c.rn){
+      v.innerHTML = '<b>Doppelt schlecht:</b> Die spätere Erhöhung ist sogar kleiner. Du fällst immer weiter zurück – Warten ist hier reiner Verlust.';
+    } else if(c.rl - c.rn < 1){
+      v.innerHTML = '<b>Du holst den Rückstand nie auf.</b> Bei gleich großer Erhöhung bleibt diese Lücke für immer bestehen. Warten kostet '+eur(c.loss)+' geschenkt.';
+    } else if(c.breakMonth===null || c.breakMonth > c.H){
+      var jr = (c.breakMonth===null) ? null : c.breakMonth/12;
+      v.innerHTML = jr
+        ? ('Erst <b>nach '+jr.toLocaleString('de-DE',{maximumFractionDigits:1})+' Jahren</b> wärst du wieder gleichauf – außerhalb deines Betrachtungszeitraums. Bis dahin liegst du hinten.')
+        : 'Der Rückstand wird im Modell praktisch nicht aufgeholt. Bis dahin liegst du durchgehend hinten.';
+    } else {
+      v.innerHTML = 'Die spätere Erhöhung ist groß genug: Gleichstand bei <b>Monat '+Math.ceil(c.breakMonth)+'</b>. Erst danach lohnt sich das Warten überhaupt.';
+    }
+
+    // Set-Button
+    $('set-break').disabled = !isFinite(c.needLater);
+
+    drawSalary(c);
+    drawCumulative(c);
+    renderBand();
+    save();
+  }
+
+  // ---------- Canvas-Helfer ----------
+  function setup(canvas, cssH){
+    var dpr = window.devicePixelRatio || 1;
+    var cssW = canvas.parentElement.clientWidth - 0;
+    canvas.style.height = cssH+'px';
+    canvas.width = Math.round(cssW*dpr);
+    canvas.height = Math.round(cssH*dpr);
+    var ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    return {ctx:ctx,w:cssW,h:cssH};
+  }
+  function niceCeil(v){
+    if(v<=0) return 1;
+    var mag = Math.pow(10, Math.floor(Math.log10(v)));
+    var n = v/mag;
+    var step = n<=1?1:n<=2?2:n<=2.5?2.5:n<=5?5:10;
+    return step*mag;
+  }
+
+  var PADL=52, PADR=12, PADT=14, PADB=26;
+
+  function drawSalary(c){
+    var canvas=$('c1'), s=setup(canvas,210), ctx=s.ctx, W=s.w, Hh=s.h;
+    var H=c.H, f=F();
+    var ymin=Infinity, ymax=0;
+    for(var j=0;j<=H;j++){ var a=c.salNowArr[j], b=c.salWaitArr[j];
+      if(a<ymin)ymin=a; if(b<ymin)ymin=b; if(a>ymax)ymax=a; if(b>ymax)ymax=b; }
+    var pad=(ymax-ymin)*0.22 || ymax*0.1;
+    var lo=Math.max(0,ymin-pad), hi=ymax+pad;
+    function X(m){ return PADL + (m/H)*(W-PADL-PADR); }
+    function Y(val){ return PADT + (1-(val-lo)/(hi-lo))*(Hh-PADT-PADB); }
+
+    ctx.clearRect(0,0,W,Hh);
+    // gridlines + y labels
+    ctx.font='11px '+getComputedStyle(document.body).fontFamily;
+    ctx.textBaseline='middle';
+    var ticks=4;
+    for(var i=0;i<=ticks;i++){
+      var val=lo+(hi-lo)*i/ticks, y=Y(val);
+      ctx.strokeStyle='#EDF0F5'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(PADL,y); ctx.lineTo(W-PADR,y); ctx.stroke();
+      ctx.fillStyle='#9AA6B6'; ctx.textAlign='right';
+      var dv=val*f;
+      ctx.fillText(dv>=1000?(Math.round(dv/100)/10).toLocaleString('de-DE',{maximumFractionDigits:1})+'k':Math.round(dv), PADL-8, y);
+    }
+    drawXAxis(ctx,W,Hh,H,X);
+
+    // Treppen-Linien (steigen mit jeder Tarifrunde)
+    function stair(arr,color){
+      var pts=[];
+      for(var j=1;j<=H;j++){ pts.push([X(j-1),Y(arr[j])]); pts.push([X(j),Y(arr[j])]); }
+      line(ctx,pts,color,2.5);
+    }
+    stair(c.salWaitArr, getCss('--later'));
+    stair(c.salNowArr, getCss('--now'));
+
+    // Marker spätere Erhöhung (Sprung bei m=w)
+    dot(ctx, X(c.w), Y(c.salWaitArr[Math.min(c.w+1,H)]), getCss('--later'));
+  }
+
+  function drawCumulative(c){
+    var canvas=$('c2'), s=setup(canvas,250), ctx=s.ctx, W=s.w, Hh=s.h;
+    var H=c.H;
+    var cumNow=function(m){ return cumOf(c.arrNow,m); };
+    var cumWait=function(m){ return cumOf(c.arrWait,m); };
+    var ymax=Math.max(c.arrNow[H], c.arrWait[H]);
+    var hi=niceCeil(ymax);
+    function X(m){ return PADL + (m/H)*(W-PADL-PADR); }
+    function Y(val){ return PADT + (1-val/hi)*(Hh-PADT-PADB); }
+
+    ctx.clearRect(0,0,W,Hh);
+    // grid + y labels (in Tausend €)
+    ctx.font='11px '+getComputedStyle(document.body).fontFamily;
+    ctx.textBaseline='middle';
+    var ticks=4;
+    for(var i=0;i<=ticks;i++){
+      var val=hi*i/ticks, y=Y(val);
+      ctx.strokeStyle='#EDF0F5'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(PADL,y); ctx.lineTo(W-PADR,y); ctx.stroke();
+      ctx.fillStyle='#9AA6B6'; ctx.textAlign='right';
+      ctx.fillText((val/1000).toLocaleString('de-DE',{maximumFractionDigits:0})+'k', PADL-8, y);
+    }
+    drawXAxis(ctx,W,Hh,H,X);
+
+    // Punkte sammeln (monatsgenau)
+    var ptsNow=[], ptsWait=[];
+    for(var j=0;j<=H;j++){ ptsNow.push([X(j),Y(c.arrNow[j])]); ptsWait.push([X(j),Y(c.arrWait[j])]); }
+
+    var bx = (c.breakMonth!==null && c.breakMonth<=H) ? c.breakMonth : null;
+
+    // Fläche Rückstand (now über wait) — rot bis Break-even (oder bis H)
+    fillBetween(ctx, ptsNow, ptsWait, 0, bx!==null?bx:H, H, X, 'rgba(226,69,42,0.13)');
+    if(bx!==null){ fillBetween(ctx, ptsWait, ptsNow, bx, H, H, X, 'rgba(22,163,74,0.12)'); }
+
+    // Linien
+    line(ctx, ptsWait, getCss('--later'), 2.5);
+    line(ctx, ptsNow, getCss('--now'), 2.5);
+
+    // Knick-Marker (spätere Erhöhung)
+    dot(ctx, X(c.w), Y(cumWait(c.w)), getCss('--later'));
+
+    // Break-even-Markierung
+    if(bx!==null){
+      var px=X(bx), py=Y(cumNow(bx));
+      ctx.strokeStyle=getCss('--mark'); ctx.lineWidth=1.5; ctx.setLineDash([4,4]);
+      ctx.beginPath(); ctx.moveTo(px,PADT); ctx.lineTo(px,Hh-PADB); ctx.stroke();
+      ctx.setLineDash([]);
+      dot(ctx,px,py,getCss('--mark'),5);
+      ctx.fillStyle=getCss('--mark'); ctx.font='600 11px '+getComputedStyle(document.body).fontFamily;
+      ctx.textAlign = px>W-90?'right':'left'; ctx.textBaseline='bottom';
+      ctx.fillText('Gleichstand', px+(px>W-90?-6:6), PADT+12);
+    } else {
+      var mid=Math.min(H, c.w + (H-c.w)*0.45);
+      ctx.fillStyle=getCss('--loss'); ctx.font='600 11px '+getComputedStyle(document.body).fontFamily;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      var ly=(Y(cumNow(mid))+Y(cumWait(mid)))/2;
+      ctx.fillText('Rückstand bleibt', X(mid), ly);
+    }
+
+    // Scrubber-Setup
+    setupScrubber(canvas, c, X, Y, cumNow, cumWait, hi, W, Hh);
+  }
+
+  // ---- Level & Gehaltsband ----
+  function badge(kind,text){
+    var dot=(kind==='info')?'':'<span class="dot"></span>';
+    return '<div class="badge '+kind+'">'+dot+'<span>'+text+'</span></div>';
+  }
+  function kEUR(v){ return v.toLocaleString('de-DE',{maximumFractionDigits:1}); }
+
+  function renderBand(){
+    var cur=levelById(state.curLevel), tgt=levelById(state.tgtLevel);
+    var fix=state.fix||0, vari=state.vari||0, total=fix+vari, totalK=total/1000;
+    var share=total>0 ? vari/total*100 : 0;
+
+    $('bc-total').textContent = eur(total)+' p.a.';
+    $('bc-share').textContent = total>0 ? share.toLocaleString('de-DE',{maximumFractionDigits:1})+' %' : '–';
+    $('bc-benefit').textContent = cur ? eur(cur.benefit)+' · Level '+cur.id : '–';
+
+    var html='';
+    if(cur){
+      if(totalK>=cur.min && totalK<=cur.max){
+        html+=badge('ok','Im Gehaltsband von Level '+cur.id+' ('+kEUR(cur.min)+'–'+kEUR(cur.max)+' k €)');
+      } else {
+        var where=totalK<cur.min?'unter':'über';
+        html+=badge('warn','Nicht im Gehaltsband! '+eur(total)+' liegt '+where+' dem Band von Level '+cur.id+' ('+kEUR(cur.min)+'–'+kEUR(cur.max)+' k €)');
+      }
+      if(total>0){
+        if(share>=cur.varMin && share<=cur.varMax){
+          html+=badge('ok','Variabler Anteil im Rahmen ('+cur.varMin+'–'+cur.varMax+' % erlaubt)');
+        } else {
+          var w2=share<cur.varMin?'zu niedrig':'zu hoch';
+          html+=badge('warn','Variabler Anteil '+w2+' ('+cur.varMin+'–'+cur.varMax+' % erlaubt)');
+        }
+      }
+    }
+    if(tgt){
+      html+=badge('info','Ziel Level '+tgt.id+': Band '+kEUR(tgt.min)+'–'+kEUR(tgt.max)+' k € · Bandmitte '+kEUR((tgt.min+tgt.max)/2)+' k € · Benefit '+eur(tgt.benefit));
+    }
+    $('bc-status').innerHTML=html;
+
+    // Variabler-Anteil-Balken (Skala 0–40 %)
+    var scaleMax=40;
+    $('share-allow').style.left  = (cur? cur.varMin/scaleMax*100:0)+'%';
+    $('share-allow').style.width = (cur? (cur.varMax-cur.varMin)/scaleMax*100:0)+'%';
+    $('share-mk').style.left = 'calc('+Math.max(0,Math.min(100,share/scaleMax*100))+'% - 1.5px)';
+    $('share-bar').classList.toggle('bad', !!(cur && total>0 && (share<cur.varMin||share>cur.varMax)));
+
+    drawBands(total);
+  }
+
+  function drawBands(total){
+    var canvas=$('cband'), s=setup(canvas, 22+LEVELS.length*30), ctx=s.ctx, W=s.w, Hh=s.h;
+    var maxK=250, Lp=30, Rp=10, Tp=6, Bp=20;
+    function X(k){ return Lp + (k/maxK)*(W-Lp-Rp); }
+    var rowH=(Hh-Tp-Bp)/LEVELS.length;
+    var totalK=(total||0)/1000;
+    var cur=levelById(state.curLevel);
+    var inBand = cur && totalK>=cur.min && totalK<=cur.max;
+
+    ctx.clearRect(0,0,W,Hh);
+    ctx.font='11px '+getComputedStyle(document.body).fontFamily;
+    // x-Gitter + Labels
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    for(var k=0;k<=maxK;k+=50){
+      var x=X(k); ctx.strokeStyle='#EDF0F5'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(x,Tp); ctx.lineTo(x,Hh-Bp); ctx.stroke();
+      ctx.fillStyle='#9AA6B6'; ctx.fillText(k, x, Hh-Bp+5);
+    }
+    // Balken (höchstes Level oben)
+    for(var i=0;i<LEVELS.length;i++){
+      var lv=LEVELS[LEVELS.length-1-i];
+      var cy=Tp + i*rowH + rowH/2;
+      ctx.fillStyle='#67748A'; ctx.textAlign='right'; ctx.textBaseline='middle';
+      ctx.font='600 11px '+getComputedStyle(document.body).fontFamily;
+      ctx.fillText(lv.id, Lp-6, cy);
+      var x0=X(lv.min), x1=X(lv.max), bh=Math.min(15,rowH*0.52);
+      var color=(lv.id===state.curLevel)?getCss('--now'):(lv.id===state.tgtLevel)?getCss('--mark'):'#C9D2DE';
+      ctx.fillStyle=color; roundRect(ctx,x0,cy-bh/2,Math.max(2,x1-x0),bh,3); ctx.fill();
+    }
+    // Marker: Gesamtgehalt als senkrechte Linie + Punkt auf aktuellem Level
+    if(total>0){
+      var mx=X(Math.min(totalK,maxK));
+      ctx.strokeStyle=inBand?getCss('--now'):getCss('--loss'); ctx.lineWidth=2; ctx.setLineDash([3,3]);
+      ctx.beginPath(); ctx.moveTo(mx,Tp); ctx.lineTo(mx,Hh-Bp); ctx.stroke(); ctx.setLineDash([]);
+      if(cur){
+        var idx=LEVELS.length-1-LEVELS.indexOf(cur);
+        var cyc=Tp+idx*rowH+rowH/2;
+        dot(ctx,mx,cyc,inBand?getCss('--now'):getCss('--loss'),5);
+      }
+    }
+  }
+
+  function roundRect(ctx,x,y,w,h,r){
+    r=Math.min(r,h/2,w/2);
+    ctx.beginPath();
+    ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+  }
+
+  // ---- Zeichen-Primitive ----
+  function getCss(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+  function line(ctx,pts,color,wdt){
+    ctx.strokeStyle=color; ctx.lineWidth=wdt; ctx.lineJoin='round'; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
+    for(var i=1;i<pts.length;i++) ctx.lineTo(pts[i][0],pts[i][1]);
+    ctx.stroke();
+  }
+  function dot(ctx,x,y,color,r){ r=r||4; ctx.fillStyle=color; ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x,y,r-2,0,7); ctx.fill(); }
+  function fillBetween(ctx, top, bot, m0, m1, H, X, color){
+    var x0=X(m0), x1=X(m1);
+    function slice(pts){ return pts.filter(function(p){ return p[0]>=x0-0.5 && p[0]<=x1+0.5; }); }
+    var t=slice(top), b=slice(bot);
+    if(t.length<1||b.length<1) return;
+    ctx.fillStyle=color; ctx.beginPath();
+    ctx.moveTo(t[0][0],t[0][1]);
+    for(var i=1;i<t.length;i++) ctx.lineTo(t[i][0],t[i][1]);
+    for(var j=b.length-1;j>=0;j--) ctx.lineTo(b[j][0],b[j][1]);
+    ctx.closePath(); ctx.fill();
+  }
+  function drawXAxis(ctx,W,Hh,H,X){
+    ctx.strokeStyle='#D9DFE8'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(PADL,Hh-PADB); ctx.lineTo(W-PADR,Hh-PADB); ctx.stroke();
+    ctx.fillStyle='#9AA6B6'; ctx.font='11px '+getComputedStyle(document.body).fontFamily;
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    var years=Math.round(H/12);
+    var stepY = years<=3?1:years<=6?1:2;
+    for(var y=0;y<=years;y+=stepY){
+      var m=y*12, x=X(m);
+      ctx.strokeStyle='#EDF0F5'; ctx.beginPath(); ctx.moveTo(x,PADT); ctx.lineTo(x,Hh-PADB); ctx.stroke();
+      ctx.fillStyle='#9AA6B6';
+      ctx.fillText(startYear+y, x, Hh-PADB+6);
+    }
+  }
+
+  // ---- Scrubber (Antippen/Ziehen für genaue Werte) ----
+  var tip=null;
+  function ensureTip(){
+    if(tip) return tip;
+    tip=document.createElement('div');
+    tip.style.cssText='position:fixed;z-index:50;background:#141E2C;color:#fff;font:600 12px/'+
+      '1.4 '+getComputedStyle(document.body).fontFamily+';padding:8px 10px;border-radius:9px;'+
+      'pointer-events:none;transform:translate(-50%,-115%);white-space:nowrap;box-shadow:0 6px 20px rgba(0,0,0,.18);opacity:0;transition:opacity .1s;';
+    document.body.appendChild(tip);
+    return tip;
+  }
+  function setupScrubber(canvas, c, X, Y, cumNow, cumWait, hi, W, Hh){
+    var H=c.H;
+    function move(e){
+      var pt = e.touches?e.touches[0]:e;
+      var rect=canvas.getBoundingClientRect();
+      var px=pt.clientX-rect.left;
+      if(px<PADL||px>W-PADR){ hide(); return; }
+      var m=Math.max(0,Math.min(H,(px-PADL)/(W-PADL-PADR)*H));
+      var now=cumNow(m), wait=cumWait(m), gap=now-wait;
+      var t=ensureTip();
+      var mm=Math.round(m);
+      var sign = gap>0? 'Rückstand ' : (gap<0?'Vorsprung ':'');
+      var gtxt = gap===0?'gleichauf':(sign+fmtEur1.format(Math.round(Math.abs(gap))));
+      t.innerHTML='Monat '+mm+' · '+(startYear+Math.floor(mm/12))+
+        '<br><span style="color:'+getCss('--now')+'">jetzt:</span> '+fmtEur1.format(Math.round(now))+
+        '<br><span style="color:'+getCss('--later')+'">später:</span> '+fmtEur1.format(Math.round(wait))+
+        '<br><b style="color:'+(gap>0?'#FF8A6E':(gap<0?'#86EFAC':'#fff'))+'">'+gtxt+'</b>';
+      t.style.left=pt.clientX+'px';
+      t.style.top=(rect.top+Y(Math.min(now,wait)) )+'px';
+      t.style.opacity='1';
+      if(e.cancelable) e.preventDefault();
+    }
+    function hide(){ if(tip) tip.style.opacity='0'; }
+    canvas.onmousemove=move; canvas.onmouseleave=hide;
+    canvas.ontouchstart=move; canvas.ontouchmove=move; canvas.ontouchend=hide;
+  }
+
+  // ---------- Eingabe-Bindings ----------
+  // Eingabefelder zeigen Werte in gewählter Einheit; intern speichern wir monatlich.
+  function bindNum(id, key){
+    var el=$(id);
+    el.addEventListener('input',function(){
+      var v=parseFloat(el.value.replace(',','.'));
+      state[key]= (isNaN(v)?0:v) / F();
+      render();
+    });
+  }
+  bindNum('s0','s0'); bindNum('rn','rn'); bindNum('rl','rl');
+
+  // Felder aus state (monatlich) in der gewählten Einheit neu beschriften
+  function syncFields(){
+    var f=F();
+    $('s0').value = Math.round(state.s0*f);
+    $('rn').value = Math.round(state.rn*f);
+    $('rl').value = Math.round(state.rl*f);
+  }
+
+  // Monats-/Jahresbrutto-Umschalter
+  $('mode-seg').querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      state.mode = btn.getAttribute('data-mode');
+      $('mode-seg').querySelectorAll('button').forEach(function(b){ b.classList.remove('on'); });
+      btn.classList.add('on');
+      syncFields();
+      render();
+    });
+  });
+
+  function bindChips(containerId, attr, key, asInt){
+    var cont=$(containerId);
+    cont.querySelectorAll('.chip').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        state[key]= asInt?parseInt(btn.getAttribute(attr),10):parseFloat(btn.getAttribute(attr));
+        cont.querySelectorAll('.chip').forEach(function(b){ b.classList.remove('on'); });
+        btn.classList.add('on');
+        render();
+      });
+    });
+  }
+  bindChips('wait-chips','data-wait','wait',true);
+  bindChips('hz-chips','data-hz','hz',true);
+
+  // Tarif-Prozentfeld (keine Monats-/Jahres-Umrechnung – es ist ein Prozentwert)
+  $('coll').addEventListener('input',function(){
+    var v=parseFloat($('coll').value.replace(',','.'));
+    state.coll = isNaN(v)?0:v;
+    render();
+  });
+  bindChips('coll-chips','data-delay','collDelay',true);
+
+  // ---- Level & Gehaltsband: Bedienung ----
+  (function fillSelects(){
+    [['cur-level'],['tgt-level']].forEach(function(p){
+      var sel=$(p[0]);
+      for(var i=LEVELS.length-1;i>=0;i--){
+        var o=document.createElement('option'); o.value=LEVELS[i].id; o.textContent=LEVELS[i].label; sel.appendChild(o);
+      }
+    });
+  })();
+  $('cur-level').addEventListener('change',function(){ state.curLevel=this.value; render(); });
+  $('tgt-level').addEventListener('change',function(){ state.tgtLevel=this.value; render(); });
+  $('fix').addEventListener('input',function(){ var v=parseFloat(this.value.replace(',','.')); state.fix=isNaN(v)?0:v; render(); });
+  $('vari').addEventListener('input',function(){ var v=parseFloat(this.value.replace(',','.')); state.vari=isNaN(v)?0:v; render(); });
+  $('band-take').addEventListener('click',function(){
+    state.mode='year';
+    state.s0=((state.fix||0)+(state.vari||0))/12; // intern monatlich
+    applyStateToUI();
+    render();
+    var v=document.querySelector('.verdict'); if(v) v.scrollIntoView({behavior:'smooth',block:'start'});
+  });
+
+  // Set-auf-Break-even
+  $('set-break').addEventListener('click',function(){
+    var c=calc();
+    if(isFinite(c.needLater)){
+      state.rl=Math.round(c.needLater); // needLater = nötige spätere Erhöhung (€/Monat)
+      syncFields();
+      render();
+    }
+  });
+
+  // ---------- Lokal speichern (nur auf diesem Gerät, kein Server) ----------
+  var KEY='gehaltsrechner.v1', flashT;
+  function save(){
+    try{
+      localStorage.setItem(KEY, JSON.stringify(state));
+      var el=$('store-status');
+      el.textContent='Gespeichert ✓'; el.classList.add('flash');
+      clearTimeout(flashT);
+      flashT=setTimeout(function(){ el.classList.remove('flash');
+        el.textContent='Wird lokal auf diesem Gerät gespeichert'; }, 1100);
+    }catch(e){
+      $('store-status').textContent='Speichern hier nicht möglich (funktioniert auf deinem Rechner)';
+    }
+  }
+  function load(){
+    try{
+      var s=localStorage.getItem(KEY);
+      if(s){ var o=JSON.parse(s);
+        for(var k in DEFAULTS){ if(o.hasOwnProperty(k) && o[k]!=null) state[k]=o[k]; } }
+    }catch(e){}
+  }
+
+  // Aktiven Chip in einem Container markieren
+  function markChip(containerId, attr, val){
+    $(containerId).querySelectorAll('.chip').forEach(function(b){
+      b.classList.toggle('on', parseInt(b.getAttribute(attr),10)===val);
+    });
+  }
+
+  // State -> Bedienoberfläche spiegeln
+  function applyStateToUI(){
+    $('mode-seg').querySelectorAll('button').forEach(function(b){
+      b.classList.toggle('on', b.getAttribute('data-mode')===state.mode);
+    });
+    syncFields();
+    $('coll').value = state.coll;
+    markChip('wait-chips','data-wait',state.wait);
+    markChip('hz-chips','data-hz',state.hz);
+    markChip('coll-chips','data-delay',state.collDelay);
+    $('cur-level').value = state.curLevel;
+    $('tgt-level').value = state.tgtLevel;
+    $('fix').value = Math.round(state.fix);
+    $('vari').value = Math.round(state.vari);
+  }
+
+  // Zurücksetzen
+  $('reset-btn').addEventListener('click',function(){
+    try{ localStorage.removeItem(KEY); }catch(e){}
+    for(var k in DEFAULTS){ if(DEFAULTS.hasOwnProperty(k)) state[k]=DEFAULTS[k]; }
+    applyStateToUI();
+    render();
+  });
+
+  var rt;
+  window.addEventListener('resize',function(){ clearTimeout(rt); rt=setTimeout(render,120); });
+
+  // Start
+  load();
+  applyStateToUI();
+  render();
+})();
+</script>
+</body>
+</html>
