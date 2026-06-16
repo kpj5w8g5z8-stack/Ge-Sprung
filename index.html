@@ -290,6 +290,20 @@
       </div>
     </div>
 
+    <p class="cap" style="margin:22px 0 6px;">Geldwert & Anlage — was das Warten wirklich kostet</p>
+    <div class="lvlgrid">
+      <div class="lvlsel" style="margin:0;"><label for="infl">Inflation (Ø p.a.)</label>
+        <div class="field"><input id="infl" type="number" inputmode="decimal" min="0" step="0.1"><span class="post">%</span></div></div>
+      <div class="lvlsel" style="margin:0;"><label for="etf">Kapitalrendite (Ø p.a., z. B. ETF)</label>
+        <div class="field"><input id="etf" type="number" inputmode="decimal" min="0" step="0.5"><span class="post">%</span></div></div>
+    </div>
+    <div style="border:1px solid var(--hair);border-radius:12px;padding:2px 14px;margin-top:12px;">
+      <div class="kv"><span class="kk">Rückstand am Ende (nominal)</span><span class="vv" id="m-nominal">–</span></div>
+      <div class="kv"><span class="kk" id="m-etf-k">inkl. entgangener Rendite</span><span class="vv" id="m-etf">–</span></div>
+      <div class="kv"><span class="kk" id="m-real-k">in heutiger Kaufkraft</span><span class="vv" id="m-real">–</span></div>
+    </div>
+    <p class="tcap" id="m-note"></p>
+
     <p class="cap" style="margin:20px 0 4px;">Gesamtgehalt pro Jahr (steigt mit jeder Tarifrunde)</p>
     <canvas id="c1"></canvas>
     <div class="legend">
@@ -336,7 +350,7 @@
     curLevel:'1', tgtLevel:'2',
     total:55000, varMode:'pct', varPct:10, varEur:5400,
     rn:6000, rl:6000, wait:12, coll:2.5, collDelay:1, hz:3,
-    lastRaise:''
+    lastRaise:'', infl:2.5, etf:7
   };
   var state={};
   for(var dk in DEFAULTS){ if(DEFAULTS.hasOwnProperty(dk)) state[dk]=DEFAULTS[dk]; }
@@ -427,11 +441,31 @@
     renderIst(b);
     renderVerdict(c);
     renderStandstill();
+    renderMoney(c);
     renderDev(b);
     drawCumulative(c);
     renderTable(c);
     drawSalary(c);
     save();
+  }
+
+  function renderMoney(c){
+    var H=c.H, r=(state.etf||0)/100, infl=(state.infl||0)/100;
+    var realFactor=Math.pow(1+infl, H/12);
+    // Endwert des Einkommens-Unterschieds, jeder Monatsbetrag bis zum Ende mit r angelegt
+    var inv=0;
+    for(var m=1;m<=H;m++){ inv += (c.salNowArr[m]-c.salWaitArr[m])*Math.pow(1+r,(H-m)/12); }
+    var nominal=c.diffEnd;
+    function put(id,val){ var el=$(id); el.textContent=eur(val);
+      el.style.color = (val>1?'var(--loss)':(val<-1?'var(--gain)':'var(--ink)')); }
+    var pf=function(x){ return (x||0).toLocaleString('de-DE',{maximumFractionDigits:1}); };
+    put('m-nominal', nominal);
+    $('m-etf-k').textContent='inkl. entgangener Rendite bei '+pf(state.etf)+' %';
+    put('m-etf', inv);
+    $('m-real-k').textContent='in heutiger Kaufkraft (Inflation '+pf(state.infl)+' %)';
+    put('m-real', inv/realFactor);
+    $('m-note').innerHTML='Früher erhaltenes Geld ist mehr wert: Es lässt sich anlegen und verliert weniger durch Inflation. '+
+      'Die Prozentsätze sind grobe Langfrist-Durchschnitte – keine Garantie; Anlagen schwanken und können verlieren.';
   }
 
   function renderStandstill(){
@@ -708,6 +742,8 @@
   $('rn').addEventListener('input',function(){ state.rn=num(this); render(); });
   $('rl').addEventListener('input',function(){ state.rl=num(this); render(); });
   $('coll').addEventListener('input',function(){ state.coll=num(this); render(); });
+  $('infl').addEventListener('input',function(){ state.infl=num(this); render(); });
+  $('etf').addEventListener('input',function(){ state.etf=num(this); render(); });
   $('varval').addEventListener('input',function(){ if(state.varMode==='eur') state.varEur=num(this); else state.varPct=num(this); render(); });
   $('last-raise').addEventListener('change',function(){ state.lastRaise=this.value||''; render(); });
 
@@ -753,6 +789,8 @@
     $('total').value=Math.round(state.total);
     $('rn').value=Math.round(state.rn); $('rl').value=Math.round(state.rl);
     $('coll').value=state.coll;
+    $('infl').value=state.infl;
+    $('etf').value=state.etf;
     $('last-raise').value=state.lastRaise||'';
     applyVarModeUI();
     markChip('wait-chips','data-wait',state.wait);
