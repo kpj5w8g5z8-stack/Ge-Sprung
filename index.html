@@ -2,1245 +2,851 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<!--
-  Cloud-Migration Workshop-Timer  ·  Raketenstart-Edition
-  - Eine einzige Datei, per Doppelklick startbar (kein Webserver noetig)
-  - Komplette Illustration in reinem CSS + Inline-SVG, keine externen Bilder/Fonts/Libraries
-  - Keine Netzwerk-Requests, kein Tracking, kein localStorage / keine Cookies
-  - Content-Security-Policy unten verbietet jeglichen externen Zugriff
--->
-<meta http-equiv="Content-Security-Policy"
-      content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none';">
-<meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Cloud-Migration · Countdown</title>
+<title>Gehalt, Level & der richtige Zeitpunkt</title>
 <style>
-  /* ============================================================
-     Design-Tokens  (Palette aus dem Titelbild)
-     ============================================================ */
   :root{
-    --sky-top:#5E82B8;
-    --sky-mid:#90AED4;
-    --sky-low:#C4D4E6;
-    --warm:#F6E6C2;          /* Sonnen-Glow hinter der Rakete */
-
-    --cloud:#FDFEFF;
-    --cloud-sh:#C5D3E5;
-    --binary:#A9C0DD;
-
-    --hill-far:#A7C39A;
-    --hill-mid:#82AE6E;
-    --hill-near:#5F9450;
-    --city:#93A6BD;
-
-    --asphalt:#8A8E96;
-    --asphalt-2:#777B83;
-
-    --rocket:#5C7FC0;
-    --rocket-dk:#3C5A98;
-    --rocket-lt:#A7BEE4;
-    --fin:#33507F;
-    --window:#CFE2F5;
-
-    --gold-top:#F4CB5E;
-    --gold-l:#DDA63C;
-    --gold-r:#C68A2A;
-    --gold-line:#A9741F;
-
-    --flame-o:#FF7A1A;
-    --flame-y:#FFD23F;
-
-    --red:#E8412B;
-    --green:#2FA84F;
-    --green-lt:#5CD27A;
-
-    --ink:#22304C;
-    --ink-soft:#46587A;
-    --panel:#161B26;          /* Scoreboard-Gehaeuse */
-    --panel-2:#0C1019;
-    --led:#7FE0FF;            /* LED-Cyan */
-    --led-dim:#2B4F5E;
-
-    --font-sans: "Trebuchet MS", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+    --bg:#F4F6F9; --panel:#FFFFFF; --ink:#141E2C; --muted:#6A788E; --hair:#E4E8EF;
+    --field:#F0F3F7; --now:#0FA67E; --later:#7C8DA8; --loss:#E2452A; --gain:#16A34A;
+    --mark:#D9971A; --ist:#475569;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono","Roboto Mono",Menlo,Consolas,monospace;
   }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-text-size-adjust:100%;}
+  body{padding:env(safe-area-inset-top) 16px calc(env(safe-area-inset-bottom) + 32px);}
+  .wrap{max-width:920px;margin:0 auto;}
 
-  *{box-sizing:border-box;margin:0;padding:0}
-  html,body{height:100%}
-  body{
-    font-family:var(--font-sans);
-    color:var(--ink);
-    overflow:hidden;
-    -webkit-font-smoothing:antialiased;
-    background:#bcd;
-  }
-  .hidden{display:none !important}
+  header{padding:20px 0 6px;}
+  .eyebrow{font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);font-weight:600;}
+  h1{font-size:22px;line-height:1.2;margin:8px 0 6px;font-weight:700;letter-spacing:-.01em;}
+  .sub{color:var(--muted);font-size:14px;line-height:1.5;margin:0;}
 
-  /* Wiederkehrende Comic-Sprechblasen-Labels aus dem Titelbild */
-  .tag{
-    font-family:var(--font-sans);font-weight:700;
-    font-size:clamp(.6rem,1.2vmin,.86rem);letter-spacing:.04em;text-transform:uppercase;
-    color:var(--ink);background:#fff;
-    padding:.28em .7em;border-radius:7px;
-    border:1.5px solid var(--ink);
-    box-shadow:0 2px 0 rgba(34,48,76,.25);
-    white-space:nowrap;
-  }
+  .card{background:var(--panel);border:1px solid var(--hair);border-radius:16px;padding:16px 16px 14px;margin:14px 0;}
+  .card h2{font-size:17px;margin:2px 0 4px;font-weight:700;letter-spacing:-.01em;}
+  .card .cap{font-size:12.5px;color:var(--muted);margin:0 0 10px;line-height:1.45;}
 
-  /* ============================================================
-     HIMMEL / SZENE  (gemeinsam fuer Setup + Timer)
-     ============================================================ */
-  .scene{position:fixed;inset:0;overflow:hidden;z-index:0}
-  .sky{
-    position:absolute;inset:0;
-    background:linear-gradient(180deg,var(--sky-top) 0%,var(--sky-mid) 52%,var(--sky-low) 78%);
-  }
-  .sunglow{
-    position:absolute;right:8%;top:8%;width:60vw;height:60vw;
-    background:radial-gradient(circle, rgba(246,230,194,.85) 0%, rgba(246,230,194,0) 62%);
-    opacity:.7;transition:opacity .8s, filter .8s;pointer-events:none;
-  }
+  /* Felder */
+  .row{padding:13px 0;border-bottom:1px solid var(--hair);}
+  .row:last-child{border-bottom:none;}
+  .row .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:9px;}
+  .row label,.lvlsel label{font-size:13px;font-weight:600;}
+  .row .hint{font-size:12px;color:var(--muted);font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;}
+  .field{display:flex;align-items:center;background:var(--field);border-radius:11px;padding:0 13px;border:1px solid transparent;transition:border-color .15s;}
+  .field:focus-within{border-color:var(--now);background:#fff;}
+  .field span.pre{color:var(--muted);font-size:15px;}
+  .field input{flex:1;border:none;background:transparent;font-family:var(--mono);font-size:17px;font-weight:600;
+    font-variant-numeric:tabular-nums;padding:12px 8px;color:var(--ink);width:100%;outline:none;-moz-appearance:textfield;}
+  .field input::-webkit-outer-spin-button,.field input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+  .field span.post{color:var(--muted);font-size:14px;}
 
-  /* Wolken */
-  .cloud{position:absolute;filter:drop-shadow(0 8px 14px rgba(40,60,90,.12))}
-  .cloud svg{display:block}
-  .cloud .body{fill:var(--cloud)}
-  .cloud .bin{fill:var(--binary);font-family:var(--font-mono);font-size:7px;opacity:.55;letter-spacing:1px}
-  @keyframes drift{from{transform:translateX(0)}to{transform:translateX(40px)}}
-  .drift-a{animation:drift 26s ease-in-out infinite alternate}
-  .drift-b{animation:drift 34s ease-in-out infinite alternate}
-  .drift-c{animation:drift 44s ease-in-out infinite alternate}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+  .chip{flex:1;min-width:58px;border:1px solid var(--hair);background:#fff;color:var(--ink);border-radius:10px;
+    padding:10px 6px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--mono);transition:all .12s;text-align:center;}
+  .chip:hover{border-color:var(--later);}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink);}
 
-  /* Skyline + Huegel + Boden */
-  .scenery{position:absolute;left:0;right:0;bottom:0;height:46%;pointer-events:none}
-  .scenery svg{position:absolute;bottom:0;width:100%;height:100%}
-  .ground{
-    position:absolute;left:0;right:0;bottom:0;height:13%;
-    background:linear-gradient(180deg,var(--asphalt),var(--asphalt-2));
-    overflow:hidden;
-  }
-  .ground::before{   /* Start-Grid Schachbrett links */
-    content:"";position:absolute;left:0;bottom:0;width:42%;height:100%;
-    background:
-      conic-gradient(#e9ecef 90deg, transparent 90deg 180deg, #e9ecef 180deg 270deg, transparent 270deg);
-    background-size:min(5vw,46px) min(5vw,46px);
-    opacity:.85;
-    -webkit-mask-image:linear-gradient(90deg,#000 60%,transparent);
-            mask-image:linear-gradient(90deg,#000 60%,transparent);
-  }
-  .ground .startline{
-    position:absolute;left:3%;bottom:18%;
-    font-family:var(--font-sans);font-weight:800;font-style:italic;
-    font-size:clamp(.9rem,3vw,2.1rem);letter-spacing:.06em;color:#eef1f4;
-    text-shadow:0 2px 4px rgba(0,0,0,.25);transform:skewX(-8deg);white-space:nowrap;
-    opacity:.9;
-  }
+  .seg{display:flex;background:var(--field);border-radius:11px;padding:4px;gap:4px;}
+  .seg button{flex:1;border:none;background:transparent;border-radius:8px;padding:11px 8px;font-size:14px;font-weight:600;
+    color:var(--muted);cursor:pointer;font-family:var(--sans);transition:all .14s;}
+  .seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(20,30,44,.10);}
 
-  /* ============================================================
-     SETUP-BILDSCHIRM
-     ============================================================ */
-  #setup{position:fixed;inset:0;z-index:5;display:grid;place-items:center;padding:clamp(16px,4vmin,42px)}
-  .card{
-    width:min(540px,94vw);
-    background:rgba(255,255,255,.92);
-    backdrop-filter:blur(6px);
-    border:2px solid var(--ink);
-    border-radius:22px;
-    padding:clamp(22px,3.4vmin,38px);
-    box-shadow:0 24px 60px rgba(30,45,75,.32), inset 0 1px 0 rgba(255,255,255,.6);
-  }
-  .eyebrow{
-    display:inline-flex;align-items:center;gap:.55em;
-    font-family:var(--font-sans);font-weight:700;font-size:.74rem;letter-spacing:.22em;text-transform:uppercase;
-    color:#fff;background:var(--rocket-dk);padding:.34em .8em;border-radius:99px;
-  }
-  .eyebrow svg{width:1em;height:1em}
-  h1{font-size:clamp(1.5rem,3.6vmin,2.1rem);line-height:1.1;letter-spacing:-.01em;font-weight:800;margin:.6em 0 .2em;color:var(--ink)}
-  .sub{color:var(--ink-soft);font-size:.96rem;margin-bottom:1.6em}
+  .setbtn{width:100%;margin-top:11px;border:1px dashed var(--mark);background:#FFFBF2;color:#8A5E07;border-radius:11px;
+    padding:12px;font-size:13px;font-weight:600;cursor:pointer;transition:background .12s;}
+  .setbtn:hover{background:#FFF6E2;}
+  .setbtn:disabled{opacity:.4;cursor:not-allowed;}
 
-  .field{margin-bottom:1.3rem}
-  .field > label{display:block;font-weight:700;font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:.55em}
-  .duration{display:flex;align-items:flex-end;gap:.5rem}
-  .timebox{flex:1}
-  .timebox small{display:block;font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);margin-top:.45em;text-align:center}
-  .colon{font-family:var(--font-mono);font-size:2rem;color:var(--ink-soft);padding-bottom:.5rem;font-weight:700}
-  input[type=number],input[type=text],textarea{
-    width:100%;background:#fff;border:2px solid #cdd6e3;color:var(--ink);border-radius:12px;
-    font-family:var(--font-mono);transition:border-color .15s, box-shadow .15s;
-  }
-  input[type=number]{font-size:2rem;text-align:center;padding:.5rem .3rem;font-weight:700;-moz-appearance:textfield}
-  input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-  textarea{font-size:1rem;padding:.8rem 1rem;resize:vertical;min-height:3.1rem;line-height:1.5}
-  input[type=text]{font-size:1rem;padding:.8rem 1rem;font-family:var(--font-sans)}
-  input:focus,textarea:focus{outline:none;border-color:var(--rocket);box-shadow:0 0 0 3px rgba(92,127,192,.25)}
-  .help{font-size:.82rem;color:var(--ink-soft);margin-top:.5em}
+  .lvlgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:8px 0;}
+  .lvlsel{margin:8px 0;}
+  .lvlsel label{display:block;color:var(--muted);margin-bottom:6px;}
+  select.lvl{width:100%;background:var(--field);border:1px solid transparent;border-radius:11px;padding:12px;font-size:15px;
+    font-weight:600;font-family:var(--sans);color:var(--ink);}
+  select.lvl:focus{border-color:var(--now);background:#fff;outline:none;}
 
-  .start-btn{
-    width:100%;margin-top:.3rem;border:none;cursor:pointer;
-    background:linear-gradient(180deg,var(--rocket-lt),var(--rocket));
-    color:#fff;font-family:var(--font-sans);font-size:1.06rem;font-weight:800;letter-spacing:.01em;
-    padding:1.05rem 1rem;border-radius:13px;
-    box-shadow:0 12px 28px rgba(60,90,152,.4), inset 0 1px 0 rgba(255,255,255,.4);
-    transition:transform .12s, box-shadow .2s;
-    display:flex;align-items:center;justify-content:center;gap:.6em;
-  }
-  .start-btn:hover{transform:translateY(-2px)}
-  .start-btn:active{transform:translateY(0)}
-  .start-btn svg{width:1.15em;height:1.15em}
-  .privacy{margin-top:1.3rem;text-align:center;font-size:.72rem;letter-spacing:.03em;color:var(--ink-soft);
-    display:flex;align-items:center;justify-content:center;gap:.55em;flex-wrap:wrap}
-  .privacy .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 7px var(--green)}
-  @keyframes shake{10%,90%{transform:translateX(-2px)}30%,70%{transform:translateX(4px)}50%{transform:translateX(-6px)}}
-  .shake{animation:shake .4s}
+  .kv{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13px;padding:8px 2px;border-bottom:1px solid var(--hair);}
+  .kv:last-of-type{border-bottom:none;}
+  .kv .kk{color:var(--muted);}
+  .kv .vv{font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums;}
 
-  /* ============================================================
-     TIMER-BILDSCHIRM
-     ============================================================ */
-  #timer{position:fixed;inset:0;z-index:1;cursor:default}
-  #timer.cursor-hidden{cursor:none}
+  .badge{display:flex;align-items:flex-start;gap:8px;border-radius:11px;padding:11px 13px;font-size:13px;font-weight:600;line-height:1.4;}
+  .badge.ok{background:#ECFBF3;color:#0B7A55;}
+  .badge.warn{background:#FDECE7;color:#B5310F;}
+  .badge.info{background:#EEF2F8;color:#3B4D66;}
+  .badge .dot{width:9px;height:9px;border-radius:50%;background:currentColor;flex:none;margin-top:4px;}
 
-  /* Server-Rack (On-Premise) unten */
-  .rack{position:absolute;left:7%;bottom:12%;width:clamp(120px,15vw,210px);z-index:3;display:flex;flex-direction:column;align-items:center;gap:.5em}
-  .rack svg{width:100%;height:auto;display:block;filter:drop-shadow(0 10px 16px rgba(20,30,50,.35))}
-  .payload{display:flex;gap:.25em;flex-wrap:wrap;justify-content:center;width:118%}
-  .pcube{width:clamp(20px,2.6vw,32px);transition:opacity .3s, transform .3s}
-  .pcube.launched{opacity:0;transform:translateY(6px) scale(.6)}
+  .rngbar{position:relative;height:12px;border-radius:6px;background:var(--field);margin:10px 0 5px;}
+  .rngbar .allow{position:absolute;top:0;bottom:0;background:rgba(15,166,126,.28);border-radius:6px;}
+  .rngbar .mk{position:absolute;top:-3px;width:3px;height:18px;border-radius:2px;background:var(--ink);}
+  .rngbar.bad .mk{background:var(--loss);}
+  .rngscale{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);font-family:var(--mono);}
 
-  /* Rakete – schwebt dauerhaft auf der Stelle, Triebwerk laeuft durchgehend */
-  .rocket-wrap{position:absolute;right:14%;top:23%;width:clamp(100px,13vw,190px);z-index:4}
-  .rocket-bob{position:relative;animation:hover 2.8s ease-in-out infinite;transform-origin:50% 90%}
-  @keyframes hover{
-    0%,100%{transform:translateY(0) rotate(7deg)}
-    50%{transform:translateY(-15px) rotate(5deg)}
-  }
-  .rocket-wrap svg{width:100%;height:auto;display:block;overflow:visible;
-    filter:drop-shadow(0 14px 22px rgba(20,30,50,.3))}
+  canvas{display:block;width:100%;touch-action:pan-y;}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;padding:8px 2px 2px;font-size:12.5px;color:var(--muted);}
+  .legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px;}
+  .bandlegend{font-size:13px;font-weight:600;padding:8px 2px 0;display:flex;gap:14px;flex-wrap:wrap;}
 
-  /* Flamme: langsames Pulsieren (aussen) + schnelles Flackern (innen) */
-  .flame-throb,.flame-flick{transform-box:fill-box;transform-origin:50% 0%}
-  .flame-throb{animation:throb 1.1s ease-in-out infinite}
-  .flame-flick{animation:flick .1s steps(2) infinite}
-  @keyframes throb{0%,100%{transform:scaleY(1)}50%{transform:scaleY(1.32)}}
-  @keyframes flick{0%{transform:scaleX(1)}100%{transform:scaleX(1.13) scaleY(.95)}}
+  /* Ergebnis */
+  .verdict{border:1px solid var(--hair);border-radius:14px;overflow:hidden;margin:4px 0 14px;}
+  .verdict .lead{padding:16px;background:linear-gradient(180deg,#FFF6F3,#FFFFFF);border-bottom:1px solid var(--hair);}
+  .lead .label{font-size:13px;color:var(--muted);font-weight:600;margin-bottom:6px;}
+  .lead .big{font-family:var(--mono);font-size:32px;font-weight:600;letter-spacing:-.02em;color:var(--loss);font-variant-numeric:tabular-nums;line-height:1;}
+  .lead .note{font-size:13px;color:var(--muted);margin-top:9px;line-height:1.45;}
+  .lead .note b{color:var(--ink);}
+  .grid2{display:flex;}
+  .cell{flex:1;padding:13px 16px;}
+  .cell + .cell{border-left:1px solid var(--hair);}
+  .cell .k{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:5px;}
+  .cell .v{font-family:var(--mono);font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.2;}
+  .cell .v small{font-size:11px;color:var(--muted);font-weight:500;}
 
-  /* Triebwerks-Abgas: Glutpartikel direkt unter der Duese */
-  .exhaust{position:absolute;left:50%;top:80%;width:0;height:0}
-  .ember{position:absolute;left:0;top:0;border-radius:50%;
-    background:radial-gradient(circle,var(--flame-y),var(--flame-o) 58%,rgba(255,122,26,0) 72%);
-    animation:emit .9s ease-in infinite}
-  .ember:nth-child(1){width:15px;height:15px;animation-delay:0s;--dx:0px}
-  .ember:nth-child(2){width:10px;height:10px;animation-delay:.15s;--dx:-7px}
-  .ember:nth-child(3){width:17px;height:17px;animation-delay:.3s;--dx:5px}
-  .ember:nth-child(4){width:9px;height:9px;animation-delay:.45s;--dx:-4px}
-  .ember:nth-child(5){width:13px;height:13px;animation-delay:.6s;--dx:8px}
-  .ember:nth-child(6){width:11px;height:11px;animation-delay:.75s;--dx:-9px}
-  @keyframes emit{
-    0%{transform:translate(-50%,0) scale(.5);opacity:.95}
-    100%{transform:translate(calc(-50% + var(--dx,0px)),58px) scale(.15);opacity:0}
-  }
+  /* Graph + Tabelle */
+  .split{display:flex;gap:16px;align-items:flex-start;}
+  .split-graph{flex:1 1 55%;min-width:0;}
+  .split-table{flex:1 1 45%;min-width:0;overflow-x:auto;}
+  @media(max-width:640px){ .split{flex-direction:column;} .split-graph,.split-table{flex:1 1 auto;width:100%;} }
+  table.num{width:100%;border-collapse:collapse;font-size:12.5px;}
+  table.num th,table.num td{padding:7px 9px;text-align:right;white-space:nowrap;}
+  table.num th{color:var(--muted);font-weight:600;border-bottom:1px solid var(--hair);font-size:11px;}
+  table.num td{font-family:var(--mono);font-variant-numeric:tabular-nums;border-bottom:1px solid var(--hair);}
+  table.num td:first-child,table.num th:first-child{text-align:left;font-family:var(--sans);font-weight:600;}
+  table.num tr.be td{background:#FFF8EC;}
+  table.num tr.be td:first-child::after{content:" ◆";color:var(--mark);}
+  .gap-neg{color:var(--gain);} .gap-pos{color:var(--loss);}
+  .tcap{font-size:11.5px;color:var(--muted);margin:8px 2px 0;line-height:1.4;}
 
-  /* Pause friert die Rakete vollstaendig ein */
-  .rocket-wrap.is-paused .rocket-bob,
-  .rocket-wrap.is-paused .flame-throb,
-  .rocket-wrap.is-paused .flame-flick,
-  .rocket-wrap.is-paused .ember{animation-play-state:paused}
+  .store{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 2px 0;}
+  #store-status{font-size:12.5px;color:var(--muted);transition:color .2s;}
+  #store-status.flash{color:var(--now);font-weight:600;}
+  #reset-btn{border:1px solid var(--hair);background:#fff;color:var(--muted);border-radius:9px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);}
+  #reset-btn:hover{border-color:var(--loss);color:var(--loss);}
+  .foot{font-size:12px;color:var(--muted);line-height:1.55;padding:10px 2px 0;}
+  .foot b{color:var(--ink);}
 
-  /* Liftoff bei 00:00 – steigt fast senkrecht auf */
-  .rocket-wrap.liftoff{animation:liftoff 2.2s cubic-bezier(.5,0,.85,.2) forwards}
-  .rocket-wrap.liftoff .rocket-bob{animation:none}
-  @keyframes liftoff{
-    0%{transform:translate(0,0) rotate(7deg)}
-    15%{transform:translate(4px,12px) rotate(7deg)}
-    100%{transform:translate(10vw,-128vh) rotate(11deg)}
-  }
-  .rocket-wrap.liftoff .flame-throb{animation:throbBig .28s ease-in-out infinite}
-  @keyframes throbBig{0%,100%{transform:scaleY(2.2)}50%{transform:scaleY(2.9)}}
-
-  /* Team am Boden */
-  .crew{position:absolute;left:35%;bottom:11%;width:clamp(190px,26vw,380px);z-index:3}
-  .crew svg{width:100%;height:auto;display:block;overflow:visible}
-  .crew .gestureA,.crew .gestureB{transform-box:view-box}
-  .crew .gestureA{transform-origin:75px 80px;animation:wave 2.3s ease-in-out infinite}
-  .crew .gestureB{transform-origin:267px 82px;animation:wave 1.9s ease-in-out .4s infinite}
-  @keyframes wave{0%,100%{transform:rotate(0deg)}50%{transform:rotate(-16deg)}}
-
-  /* Cloud-Dock: hier sammeln sich die migrierten Contexts */
-  .dock-label{position:absolute;left:50%;top:4.5%;transform:translateX(-50%);z-index:3}
-  .cloud-dock{
-    position:absolute;left:50%;top:9%;transform:translateX(-50%);
-    width:min(74vw,940px);z-index:3;
-    display:flex;flex-wrap:wrap;gap:.5rem 1rem;justify-content:center;align-content:flex-start;
-    padding:.4rem;border-radius:18px;transition:box-shadow .6s, background .6s;
-  }
-  .slot{display:flex;flex-direction:column;align-items:center;gap:.2em}
-  .slot .cube-h{width:clamp(30px,4vw,52px);opacity:.22;transition:opacity .35s}
-  .slot .cube-h svg{display:block;width:100%;height:auto}
-  .slot .name{
-    font-family:var(--font-mono);font-size:clamp(.6rem,1.05vmin,.78rem);font-weight:600;
-    color:var(--ink);background:rgba(255,255,255,.82);padding:.12em .5em;border-radius:5px;
-    border:1px solid rgba(34,48,76,.18);visibility:hidden;white-space:nowrap;
-    max-width:18ch;overflow:hidden;text-overflow:ellipsis;
-  }
-  .slot.arrived .cube-h{opacity:1;animation:pop .5s cubic-bezier(.2,1.3,.4,1)}
-  .slot.arrived .name{visibility:visible}
-  @keyframes pop{0%{transform:scale(.5);opacity:0}60%{transform:scale(1.12)}100%{transform:scale(1)}}
-  /* Cloud leuchtet gruen im Zielzustand */
-  body.is-complete .cloud-dock{background:rgba(92,210,122,.12);box-shadow:0 0 60px rgba(92,210,122,.55)}
-
-  /* ---- Scoreboard (Zeit + Fortschritt) ---- */
-  .scoreboard{
-    position:absolute;left:50%;top:43%;transform:translate(-50%,-50%);z-index:6;
-    background:linear-gradient(180deg,var(--panel),var(--panel-2));
-    border:2px solid #05070c;border-radius:18px;
-    padding:clamp(.7rem,1.8vmin,1.3rem) clamp(1.1rem,3vmin,2.2rem) clamp(.9rem,2vmin,1.4rem);
-    box-shadow:0 24px 50px rgba(15,25,45,.5), inset 0 0 0 3px rgba(127,224,255,.07), inset 0 2px 0 rgba(255,255,255,.05);
-    text-align:center;
-  }
-  .tminus{font-family:var(--font-mono);font-weight:700;color:var(--led);opacity:.85;
-    font-size:clamp(.7rem,1.7vmin,1.05rem);letter-spacing:.5em;text-indent:.5em;text-transform:uppercase;
-    margin-bottom:.1em;transition:color .3s}
-  .time{
-    font-family:var(--font-mono);font-weight:700;font-variant-numeric:tabular-nums;
-    font-size:clamp(3.2rem,20vmin,15rem);line-height:.92;letter-spacing:.02em;
-    color:var(--led);
-    text-shadow:0 0 12px rgba(127,224,255,.65), 0 0 38px rgba(127,224,255,.3);
-    transition:color .3s, text-shadow .3s;
-    position:relative;
-  }
-  .time::after{   /* LED-Dot-Matrix-Textur */
-    content:"";position:absolute;inset:0;pointer-events:none;
-    background-image:radial-gradient(rgba(0,0,0,.34) 38%, transparent 40%);
-    background-size:5px 5px;mix-blend-mode:multiply;opacity:.5;border-radius:6px;
-  }
-  .progress{margin-top:.55rem;height:clamp(8px,1.3vmin,12px);border-radius:99px;
-    background:rgba(127,224,255,.12);position:relative;overflow:visible}
-  .progress .bar{position:absolute;left:0;top:0;bottom:0;border-radius:99px;width:0%;
-    background:linear-gradient(90deg,var(--led),#aef0ff);box-shadow:0 0 10px rgba(127,224,255,.6);
-    transition:background .3s}
-  .progress .thumb{position:absolute;top:50%;transform:translate(-50%,-50%);font-size:clamp(.8rem,1.8vmin,1.2rem);
-    filter:drop-shadow(0 0 4px rgba(127,224,255,.7));transition:left .12s linear}
-  .count{margin-top:.5rem;font-family:var(--font-mono);font-size:clamp(.62rem,1.3vmin,.85rem);
-    letter-spacing:.16em;text-transform:uppercase;color:#8ea6c4}
-  .count b{color:var(--led)}
-
-  /* kritischer Zustand: letzte Minute */
-  body.is-critical .time{color:#ff7a66;text-shadow:0 0 14px rgba(232,65,43,.7),0 0 40px rgba(232,65,43,.35);animation:blink 1s step-end infinite}
-  body.is-critical .tminus{color:#ff7a66}
-  body.is-critical .progress .bar{background:linear-gradient(90deg,#ff7a66,#ffb3a6)}
-  body.is-critical .sunglow{opacity:1;filter:saturate(1.5) hue-rotate(-14deg)}
-  @keyframes blink{0%,49%{opacity:1}50%,100%{opacity:.55}}
-
-  /* Zielzustand */
-  body.is-complete .time{color:var(--green-lt);text-shadow:0 0 16px rgba(92,210,122,.7)}
-  body.is-complete .tminus{color:var(--green-lt)}
-  body.is-complete .progress .bar{background:linear-gradient(90deg,var(--green),var(--green-lt));width:100% !important}
-
-  /* Pause */
-  .pause-ind{position:absolute;left:50%;top:74%;transform:translate(-50%,-50%) scale(.92);z-index:7;
-    display:flex;align-items:center;gap:.5em;opacity:0;pointer-events:none;
-    font-family:var(--font-mono);font-weight:700;font-size:clamp(1rem,2.6vmin,1.7rem);letter-spacing:.2em;text-transform:uppercase;
-    color:#fff;background:rgba(22,27,38,.82);padding:.6em 1.2em;border-radius:13px;border:2px solid #05070c;
-    transition:opacity .2s, transform .2s}
-  .pause-ind.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
-  .pause-ind .bars{display:flex;gap:5px}
-  .pause-ind .bars i{width:7px;height:1.05em;background:var(--led);border-radius:2px;display:block}
-
-  /* Abschluss-Banner */
-  .done{position:absolute;left:50%;top:70%;transform:translate(-50%,12px);text-align:center;z-index:7;
-    opacity:0;pointer-events:none;transition:opacity .7s, transform .7s}
-  .done.show{opacity:1;transform:translate(-50%,0)}
-  .done .big{font-family:var(--font-sans);font-weight:800;font-size:clamp(1.7rem,4.6vmin,2.9rem);color:#fff;
-    background:linear-gradient(180deg,var(--green-lt),var(--green));-webkit-background-clip:text;background-clip:text;
-    -webkit-text-fill-color:transparent;filter:drop-shadow(0 3px 10px rgba(47,168,79,.35))}
-  .done .small{color:var(--ink);font-weight:700;font-size:1rem;margin-top:.3em;
-    background:rgba(255,255,255,.8);display:inline-block;padding:.25em .8em;border-radius:8px}
-  .done .key{margin-top:1em;font-family:var(--font-mono);font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;
-    color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.4)}
-
-  /* Hinweis */
-  .hint{position:absolute;left:50%;bottom:clamp(10px,2vh,24px);transform:translateX(-50%);z-index:6;
-    display:flex;gap:1.1em;flex-wrap:wrap;justify-content:center;transition:opacity .5s;pointer-events:none;
-    font-family:var(--font-mono);font-size:.74rem;letter-spacing:.08em;color:#eef1f4;text-shadow:0 1px 3px rgba(0,0,0,.35)}
-  .hint kbd{background:rgba(22,27,38,.78);border:1px solid #05070c;border-bottom-width:2px;border-radius:5px;
-    padding:.12em .5em;color:#fff;margin-right:.4em}
-  .hint.fade{opacity:0}
-
-  /* FX-Layer (Flug-Cubes, Flammen-Puffs, Konfetti, Ballast) */
-  .fx{position:fixed;inset:0;pointer-events:none;z-index:8;overflow:visible}
-  .fly{position:fixed;will-change:transform,opacity}
-  .puff{position:fixed;width:clamp(14px,2vw,26px);height:clamp(14px,2vw,26px);border-radius:50%;
-    background:radial-gradient(circle,var(--flame-y),var(--flame-o) 60%,transparent 72%);will-change:transform,opacity}
-  .confetti{position:fixed;width:10px;height:14px;border-radius:2px;will-change:transform,opacity}
-  .ballast{position:fixed;display:flex;flex-direction:column;align-items:center;gap:.2em;will-change:transform,opacity}
-  .ballast .tag{font-size:.62rem;padding:.2em .5em}
-
-  /* ============================================================
-     MODUS-UMSCHALTER (Setup)
-     ============================================================ */
-  .mode-switch{
-    display:flex;gap:.3rem;background:#e7edf5;border:2px solid #cdd6e3;
-    border-radius:14px;padding:.32rem;margin-bottom:1.5rem;
-  }
-  .mode-switch button{
-    flex:1;cursor:pointer;border:none;background:transparent;border-radius:10px;
-    font-family:var(--font-sans);font-weight:800;font-size:.92rem;
-    color:var(--ink-soft);padding:.72rem .5rem;
-    display:flex;align-items:center;justify-content:center;gap:.45em;
-    transition:background .18s,color .18s,box-shadow .18s,transform .1s;
-  }
-  .mode-switch button svg{width:1.18em;height:1.18em}
-  .mode-switch button:active{transform:translateY(1px)}
-  .mode-switch button[aria-selected="true"]{
-    background:linear-gradient(180deg,var(--rocket-lt),var(--rocket));color:#fff;
-    box-shadow:0 5px 13px rgba(60,90,152,.34), inset 0 1px 0 rgba(255,255,255,.4);
-  }
-
-  /* Schnellwahl-Chips fuer die Pausen-Uhrzeit */
-  .presets{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.8rem}
-  .presets button{
-    cursor:pointer;border:2px solid #cdd6e3;background:#fff;border-radius:99px;
-    font-family:var(--font-mono);font-weight:700;font-size:.84rem;color:var(--ink-soft);
-    padding:.42em .9em;transition:border-color .15s,color .15s,transform .1s;
-  }
-  .presets button:hover{border-color:var(--rocket);color:var(--rocket)}
-  .presets button:active{transform:translateY(1px)}
-  .help.err{color:var(--red);font-weight:700}
-
-  /* ============================================================
-     PAUSEN-BILDSCHIRM
-     ============================================================ */
-  #breakScreen{position:fixed;inset:0;z-index:1;cursor:default;display:grid;place-items:center;padding:clamp(14px,4vmin,42px)}
-  #breakScreen.cursor-hidden{cursor:none}
-
-  .break-panel{
-    position:relative;z-index:6;text-align:center;max-width:min(92vw,1100px);
-    background:linear-gradient(180deg,var(--panel),var(--panel-2));
-    border:2px solid #05070c;border-radius:28px;
-    padding:clamp(1.4rem,4.5vmin,3.2rem) clamp(1.6rem,6vmin,4.4rem);
-    box-shadow:0 30px 70px rgba(15,25,45,.55), inset 0 0 0 3px rgba(127,224,255,.07), inset 0 2px 0 rgba(255,255,255,.05);
-    transition:box-shadow .6s, border-color .6s;
-  }
-
-  /* Kaffeetasse mit aufsteigendem Dampf */
-  .coffee{position:relative;width:clamp(56px,8.5vmin,92px);margin:0 auto 1.1rem}
-  .coffee svg{width:100%;height:auto;display:block;filter:drop-shadow(0 8px 14px rgba(0,0,0,.4))}
-  .coffee .steam{position:absolute;left:50%;top:-34%;transform:translateX(-50%);display:flex;gap:7px}
-  .coffee .steam i{width:5px;height:22px;border-radius:99px;
-    background:linear-gradient(180deg,rgba(207,226,245,0),rgba(207,226,245,.85));
-    opacity:0;animation:steam 2.6s ease-in-out infinite}
-  .coffee .steam i:nth-child(2){animation-delay:.6s}
-  .coffee .steam i:nth-child(3){animation-delay:1.2s}
-  @keyframes steam{
-    0%{opacity:0;transform:translateY(8px) scaleY(.5)}
-    35%{opacity:.85}
-    100%{opacity:0;transform:translateY(-18px) scaleY(1.25)}
-  }
-
-  .break-anlass{
-    display:inline-flex;align-items:center;gap:.5em;
-    font-family:var(--font-sans);font-weight:800;letter-spacing:.14em;text-transform:uppercase;
-    font-size:clamp(.78rem,2vmin,1.15rem);color:#fff;
-    background:rgba(127,224,255,.14);border:1px solid rgba(127,224,255,.3);
-    padding:.42em 1.05em;border-radius:99px;margin-bottom:1.15rem;
-    transition:background .5s,border-color .5s;
-  }
-  .break-lead{
-    font-family:var(--font-mono);font-weight:700;color:var(--led);opacity:.85;
-    font-size:clamp(.78rem,2vmin,1.25rem);letter-spacing:.42em;text-indent:.42em;text-transform:uppercase;
-    margin-bottom:.12em;transition:color .3s;
-  }
-  .break-time{
-    font-family:var(--font-mono);font-weight:700;font-variant-numeric:tabular-nums;
-    font-size:clamp(4rem,27vmin,21rem);line-height:.9;letter-spacing:.02em;color:var(--led);
-    text-shadow:0 0 16px rgba(127,224,255,.65),0 0 48px rgba(127,224,255,.32);
-    transition:color .3s,text-shadow .3s;
-    display:flex;align-items:baseline;justify-content:center;gap:.22em;
-  }
-  .break-time .uhr{font-size:.27em;letter-spacing:.18em;opacity:.7}
-  .break-sub{
-    margin-top:1.05rem;display:flex;gap:1.3rem;flex-wrap:wrap;justify-content:center;align-items:center;
-    font-family:var(--font-mono);font-size:clamp(.7rem,1.8vmin,1rem);letter-spacing:.1em;text-transform:uppercase;color:#8ea6c4;
-  }
-  .break-sub b{color:var(--led);font-variant-numeric:tabular-nums}
-  .break-sub .sep{width:6px;height:6px;border-radius:50%;background:rgba(127,224,255,.4)}
-
-  /* letzte Minute: sanftes Bernstein-Pulsieren */
-  #breakScreen.soon .break-lead{color:#ffd27f}
-  #breakScreen.soon .break-time{color:#ffe3a6;text-shadow:0 0 18px rgba(255,210,120,.6);animation:softpulse 1.4s ease-in-out infinite}
-  @keyframes softpulse{0%,100%{opacity:1}50%{opacity:.74}}
-
-  /* Pause vorbei */
-  #breakScreen.is-over .break-panel{border-color:rgba(92,210,122,.6);box-shadow:0 30px 80px rgba(47,168,79,.42), inset 0 0 0 3px rgba(92,210,122,.12)}
-  #breakScreen.is-over .break-time,#breakScreen.is-over .break-lead{color:var(--green-lt);text-shadow:0 0 18px rgba(92,210,122,.7)}
-  #breakScreen.is-over .break-anlass{background:rgba(92,210,122,.16);border-color:rgba(92,210,122,.4)}
-  #breakScreen.is-over .coffee .steam i{animation:none;opacity:0}
-
-  @media (prefers-reduced-motion: reduce){
-    .drift-a,.drift-b,.drift-c,.rocket-bob,.flame-throb,.flame-flick,.ember,
-    .crew .gestureA,.crew .gestureB,.slot.arrived .cube-h,
-    .coffee .steam i,#breakScreen.soon .break-time{animation:none}
-    body.is-critical .time{animation:none}
-    #breakScreen.soon .break-time{opacity:1}
-  }
+  .dateinp{width:100%;background:var(--field);border:1px solid transparent;border-radius:11px;padding:12px;
+    font-size:15px;font-family:var(--sans);color:var(--ink);font-weight:600;}
+  .dateinp:focus{border-color:var(--now);background:#fff;outline:none;}
+  #standstill{padding:13px 16px;border-top:1px solid var(--hair);font-size:13px;color:var(--muted);line-height:1.5;}
+  .scen{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--hair);border-radius:11px;padding:10px 12px;}
+  .scen-name{font-size:14px;font-weight:600;word-break:break-word;}
+  .scen-meta{font-size:11.5px;color:var(--muted);margin-top:2px;}
+  .scen-act{display:flex;gap:8px;flex:none;}
+  .scen-act button{border:1px solid var(--hair);background:#fff;border-radius:9px;padding:8px 12px;font-size:12.5px;
+    font-weight:600;cursor:pointer;font-family:var(--sans);color:var(--ink);}
+  .scen-act button:hover{border-color:var(--now);color:var(--now);}
+  .scen-act button.del:hover{border-color:var(--loss);color:var(--loss);}
 </style>
 </head>
 <body>
+<div class="wrap">
 
-<!-- =================== HINTERGRUND-SZENE =================== -->
-<div class="scene" id="scene">
-  <div class="sky"></div>
-  <div class="sunglow"></div>
+  <header>
+    <div class="eyebrow">Gehaltsgespräch · Vorbereitung</div>
+    <h1>Level, Gehaltsband & der richtige Zeitpunkt</h1>
+    <p class="sub">Drei Schritte: Ist-Situation einordnen → Beförderung jetzt oder später durchspielen →
+      sehen, wann sich das Warten amortisiert. Alle Eingaben bleiben lokal auf deinem Gerät.</p>
+  </header>
 
-  <!-- Wolken -->
-  <div class="cloud drift-a" style="left:4%;top:9%;width:clamp(150px,18vw,300px)">
-    <svg viewBox="0 0 200 110"><g class="body">
-      <ellipse cx="62" cy="68" rx="42" ry="30"/><ellipse cx="104" cy="52" rx="46" ry="34"/>
-      <ellipse cx="146" cy="70" rx="38" ry="28"/><rect x="34" y="62" width="138" height="38" rx="19"/>
-    </g>
-    <text class="bin" x="58" y="60">01001</text><text class="bin" x="84" y="74">1011 0</text>
-    </svg>
-  </div>
-  <div class="cloud drift-b" style="left:40%;top:5%;width:clamp(140px,16vw,260px)">
-    <svg viewBox="0 0 200 110"><g class="body">
-      <ellipse cx="62" cy="68" rx="42" ry="30"/><ellipse cx="104" cy="52" rx="46" ry="34"/>
-      <ellipse cx="146" cy="70" rx="38" ry="28"/><rect x="34" y="62" width="138" height="38" rx="19"/>
-    </g>
-    <text class="bin" x="60" y="62">110 01</text><text class="bin" x="80" y="76">0 10110</text>
-    </svg>
-  </div>
-  <div class="cloud drift-c" style="left:68%;top:11%;width:clamp(150px,17vw,280px)">
-    <svg viewBox="0 0 200 110"><g class="body">
-      <ellipse cx="62" cy="68" rx="42" ry="30"/><ellipse cx="104" cy="52" rx="46" ry="34"/>
-      <ellipse cx="146" cy="70" rx="38" ry="28"/><rect x="34" y="62" width="138" height="38" rx="19"/>
-    </g></svg>
-  </div>
-  <div class="cloud drift-a" style="left:20%;top:22%;width:clamp(120px,13vw,210px);opacity:.85">
-    <svg viewBox="0 0 200 110"><g class="body">
-      <ellipse cx="62" cy="68" rx="42" ry="30"/><ellipse cx="104" cy="52" rx="46" ry="34"/>
-      <ellipse cx="146" cy="70" rx="38" ry="28"/><rect x="34" y="62" width="138" height="38" rx="19"/>
-    </g></svg>
-  </div>
+  <!-- ============ SCHRITT 1: IST-SITUATION ============ -->
+  <section class="card">
+    <div class="eyebrow">Schritt 1 · Ist-Situation</div>
+    <h2>Wo stehst du heute?</h2>
+    <p class="cap">Gib dein Jahres-Gesamtgehalt (Fix + Variabel + Benefit Account) und den variablen Anteil an –
+      wahlweise in % oder in €. Der Benefit Account deines Levels wird automatisch berücksichtigt (er gehört
+      <b>nicht</b> zum Zielgehalt). Das Tool schlüsselt alles auf und ordnet dich ins Gehaltsband ein.</p>
 
-  <!-- Skyline + Huegel -->
-  <div class="scenery">
-    <svg viewBox="0 0 1000 460" preserveAspectRatio="none">
-      <!-- Stadt-Silhouette links -->
-      <g fill="var(--city)" opacity=".75">
-        <rect x="20" y="250" width="22" height="120"/><rect x="48" y="220" width="26" height="150"/>
-        <rect x="80" y="270" width="18" height="100"/><rect x="104" y="200" width="16" height="170"/>
-        <rect x="126" y="240" width="24" height="130"/>
-        <!-- rechts -->
-        <rect x="852" y="250" width="20" height="120"/><rect x="878" y="210" width="26" height="160"/>
-        <rect x="910" y="262" width="18" height="108"/><rect x="934" y="230" width="22" height="140"/>
-        <rect x="962" y="200" width="18" height="170"/>
-      </g>
-      <!-- Huegel -->
-      <path fill="var(--hill-far)" d="M0 330 Q 250 270 520 320 T 1000 318 V460 H0 Z"/>
-      <path fill="var(--hill-mid)" d="M0 372 Q 300 312 600 358 T 1000 360 V460 H0 Z"/>
-      <path fill="var(--hill-near)" d="M0 410 Q 220 372 480 402 T 1000 404 V460 H0 Z"/>
-    </svg>
-  </div>
+    <div class="lvlgrid">
+      <div class="lvlsel"><label for="cur-level">Aktuelles Level</label>
+        <select id="cur-level" class="lvl"></select></div>
+      <div class="lvlsel"><label for="total">Jahres-Gesamtgehalt (inkl. Benefit)</label>
+        <div class="field"><span class="pre">€</span><input id="total" type="number" inputmode="decimal" min="0" step="500"></div></div>
+    </div>
 
-  <!-- Asphalt + Startlinie -->
-  <div class="ground"><span class="startline">STARTLINE · CLOUD MIGRATION</span></div>
+    <div class="lvlsel"><label>Variablen Anteil eingeben als</label>
+      <div class="seg" id="varmode-seg">
+        <button data-vm="pct" class="on">Prozent (%)</button>
+        <button data-vm="eur">Euro (€)</button>
+      </div>
+    </div>
+    <div class="lvlsel"><label id="lbl-varval" for="varval">Variabler Anteil (%)</label>
+      <div class="field"><span class="pre" id="varval-pre" style="display:none">€</span><input id="varval" type="number" inputmode="decimal" min="0" step="0.5"><span class="post" id="varval-post">%</span></div>
+    </div>
+
+    <div class="lvlsel"><label for="last-raise">Letzte Gehaltserhöhung am</label>
+      <input id="last-raise" type="date" class="dateinp">
+      <div class="hint" id="since-hint" style="margin-top:6px;text-align:left;color:var(--muted);font-family:var(--mono);font-size:12px;"></div>
+    </div>
+
+    <div class="kv"><span class="kk">Jahresgesamtgehalt (inkl. Benefit)</span><span class="vv" id="bc-gesamt">–</span></div>
+    <div class="kv"><span class="kk">− Benefit Account (Level)</span><span class="vv" id="bc-benefit">–</span></div>
+    <div class="kv"><span class="kk">= Jahreszielgehalt (Fix + Variabel)</span><span class="vv" id="bc-ziel">–</span></div>
+    <div class="kv"><span class="kk">davon variabel</span><span class="vv" id="bc-var">–</span></div>
+    <div class="kv"><span class="kk">davon fix</span><span class="vv" id="bc-fix">–</span></div>
+
+    <div id="bc-status" style="display:flex;flex-direction:column;gap:8px;margin:13px 0 4px;"></div>
+
+    <p class="cap" style="margin:16px 0 0;">Variabler Anteil vs. erlaubte Bandbreite</p>
+    <div class="rngbar" id="share-bar"><div class="allow" id="share-allow"></div><div class="mk" id="share-mk"></div></div>
+    <div class="rngscale"><span>0 %</span><span>40 %</span></div>
+
+    <p class="cap" style="margin:18px 0 4px;">Gehaltsbänder je Level (k €, Zielgehalt)</p>
+    <canvas id="cband1"></canvas>
+    <div class="bandlegend" id="band1-legend"></div>
+  </section>
+
+  <!-- ============ SCHRITT 2: JETZT ODER SPÄTER ============ -->
+  <section class="card">
+    <div class="eyebrow">Schritt 2 · jetzt oder später?</div>
+    <h2>Beförderung jetzt – oder warten?</h2>
+    <p class="cap">Gib beide Erhöhungen als Euro-Betrag aufs <b>Gesamtgehalt</b> an. Das Band zeigt darunter,
+      wohin dich „jetzt" und „später" bewegen würden – die Ist-Situation ist als Referenz eingeblendet.</p>
+
+    <div class="lvlsel"><label for="tgt-level">Ziel-Level (nach Beförderung)</label>
+      <select id="tgt-level" class="lvl"></select></div>
+
+    <div class="row">
+      <div class="top"><label for="rn">Erhöhung, wenn JETZT befördert</label><span class="hint" id="rn-hint"></span></div>
+      <div class="field"><span class="pre">+€</span><input id="rn" type="number" inputmode="decimal" min="0" step="250"><span class="post">/ Jahr</span></div>
+    </div>
+
+    <div class="row">
+      <div class="top"><label for="rl">Erhöhung, wenn SPÄTER befördert</label><span class="hint" id="rl-hint"></span></div>
+      <div class="field"><span class="pre">+€</span><input id="rl" type="number" inputmode="decimal" min="0" step="250"><span class="post">/ Jahr</span></div>
+      <button class="setbtn" id="set-break">↑ Auf „gerade noch lohnenswert" setzen (Gleichstand am Ende des Zeitraums)</button>
+    </div>
+
+    <div class="row">
+      <div class="top"><label>Wie lange soll ich warten?</label><span class="hint" id="wait-lbl"></span></div>
+      <div class="chips" id="wait-chips">
+        <button class="chip" data-wait="6">6 Mon.</button>
+        <button class="chip" data-wait="12">12 Mon.</button>
+        <button class="chip" data-wait="18">18 Mon.</button>
+        <button class="chip" data-wait="24">24 Mon.</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="top"><label for="coll">Kollektive Tariferhöhung</label><span class="hint" id="coll-hint"></span></div>
+      <div class="field"><span class="pre">+</span><input id="coll" type="number" inputmode="decimal" min="0" step="0.5"><span class="post">% / Jahr</span></div>
+      <div class="top" style="margin:13px 0 9px;"><label>Pausiert noch (Start wieder in …)</label><span class="hint" id="coll-delay-lbl"></span></div>
+      <div class="chips" id="coll-chips">
+        <button class="chip" data-delay="0">0 J.</button>
+        <button class="chip" data-delay="1">1 J.</button>
+        <button class="chip" data-delay="2">2 J.</button>
+        <button class="chip" data-delay="3">3 J.</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="top"><label>Betrachtungszeitraum</label><span class="hint" id="hz-lbl"></span></div>
+      <div class="chips" id="hz-chips">
+        <button class="chip" data-hz="2">2 Jahre</button>
+        <button class="chip" data-hz="3">3 Jahre</button>
+        <button class="chip" data-hz="5">5 Jahre</button>
+        <button class="chip" data-hz="10">10 Jahre</button>
+      </div>
+    </div>
+
+    <p class="cap" style="margin:16px 0 4px;">Entwicklung im Gehaltsband (k €, Zielgehalt)</p>
+    <canvas id="cband2"></canvas>
+    <div class="bandlegend" id="band2-legend"></div>
+  </section>
+
+  <!-- ============ SCHRITT 3: AMORTISATION ============ -->
+  <section class="card">
+    <div class="eyebrow">Schritt 3 · Amortisation</div>
+    <h2>Wann läuft es wieder zusammen?</h2>
+    <p class="cap">Aufsummiertes Gesamtgehalt über die Zeit. Die rote Fläche ist dein Rückstand durchs Warten –
+      rechts die Zahlen Jahr für Jahr inklusive Gap.</p>
+
+    <div class="verdict">
+      <div class="lead">
+        <div class="label">Rückstand bis zur späteren Erhöhung</div>
+        <div class="big" id="r-loss">–</div>
+        <div class="note" id="r-verdict">–</div>
+      </div>
+      <div class="grid2">
+        <div class="cell"><div class="k">Gleichstand erreicht</div><div class="v" id="r-break">–</div></div>
+        <div class="cell"><div class="k">Nötige spätere Erhöhung</div><div class="v" id="r-need">–</div></div>
+      </div>
+      <div id="standstill"></div>
+    </div>
+
+    <div class="split">
+      <div class="split-graph">
+        <canvas id="c2"></canvas>
+        <div class="legend">
+          <span><i style="background:var(--now)"></i>Jetzt befördert</span>
+          <span><i style="background:var(--later)"></i>Später befördert</span>
+          <span><i style="background:var(--loss)"></i>Rückstand</span>
+          <span><i style="background:var(--mark)"></i>Gleichstand</span>
+        </div>
+      </div>
+      <div class="split-table">
+        <table class="num">
+          <thead><tr><th>Jahr</th><th>∑ jetzt</th><th>∑ später</th><th>Rückstand</th></tr></thead>
+          <tbody id="num-body"></tbody>
+        </table>
+        <p class="tcap" id="num-cap"></p>
+      </div>
+    </div>
+
+    <p class="cap" style="margin:22px 0 6px;">Geldwert & Anlage — was das Warten wirklich kostet</p>
+    <div class="lvlgrid">
+      <div class="lvlsel" style="margin:0;"><label for="infl">Inflation (Ø p.a.)</label>
+        <div class="field"><input id="infl" type="number" inputmode="decimal" min="0" step="0.1"><span class="post">%</span></div></div>
+      <div class="lvlsel" style="margin:0;"><label for="etf">Kapitalrendite (Ø p.a., z. B. ETF)</label>
+        <div class="field"><input id="etf" type="number" inputmode="decimal" min="0" step="0.5"><span class="post">%</span></div></div>
+    </div>
+    <div style="border:1px solid var(--hair);border-radius:12px;padding:2px 14px;margin-top:12px;">
+      <div class="kv"><span class="kk">Rückstand am Ende (nominal)</span><span class="vv" id="m-nominal">–</span></div>
+      <div class="kv"><span class="kk" id="m-etf-k">inkl. entgangener Rendite</span><span class="vv" id="m-etf">–</span></div>
+      <div class="kv"><span class="kk" id="m-real-k">in heutiger Kaufkraft</span><span class="vv" id="m-real">–</span></div>
+    </div>
+    <p class="tcap" id="m-note"></p>
+
+    <p class="cap" style="margin:20px 0 4px;">Gesamtgehalt pro Jahr (steigt mit jeder Tarifrunde)</p>
+    <canvas id="c1"></canvas>
+    <div class="legend">
+      <span><i style="background:var(--now)"></i>Jetzt befördert</span>
+      <span><i style="background:var(--later)"></i>Später befördert</span>
+    </div>
+
+    <div class="store">
+      <span id="store-status">Wird lokal auf diesem Gerät gespeichert</span>
+      <button id="reset-btn" type="button">Zurücksetzen</button>
+    </div>
+  </section>
+
+  <!-- ============ SZENARIEN ============ -->
+  <section class="card">
+    <div class="eyebrow">Szenarien</div>
+    <h2>Eingaben speichern & wieder laden</h2>
+    <p class="cap">Speichere deine aktuellen Eingaben unter einem Namen. Du kannst beliebig viele behalten und
+      jederzeit wieder laden – sie werden nicht mehr überschrieben. Alles bleibt ausschließlich lokal in diesem Browser
+      auf deinem Gerät; niemand sonst hat Zugriff.</p>
+    <div class="lvlgrid" style="grid-template-columns:1fr auto;align-items:end;gap:10px;">
+      <div class="lvlsel" style="margin:0;"><label for="scen-name">Name des Szenarios</label>
+        <input id="scen-name" type="text" class="dateinp" placeholder="z. B. Stand heute, Forderung Level 3 …" maxlength="60"></div>
+      <button class="setbtn" id="scen-save" style="margin-top:0;width:auto;padding:12px 18px;white-space:nowrap;border-color:var(--now);background:#F0FBF7;color:#0B7A55;">Speichern</button>
+    </div>
+    <div id="scen-list" style="margin-top:14px;display:flex;flex-direction:column;gap:8px;"></div>
+  </section>
+
+  <p class="foot">Modell: Gesamtgehalt (Fix + Variabel + Benefit) je Stufe, plus optionale kollektive Tariferhöhung
+    (wirkt auf beide Wege gleich), Brutto, ohne Steuerprogression. Es geht um die <b>Logik des Wartens</b> –
+    keine Nettoprognose. Bandwerte, Benefits und %-Bandbreiten stammen aus den Unternehmens­tabellen.
+    Alle Eingaben werden <b>ausschließlich lokal auf deinem Gerät</b> gespeichert.</p>
+
 </div>
 
-<!-- =================== SETUP =================== -->
-<section id="setup">
-  <div class="card" id="card">
-    <span class="eyebrow">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c3 2 5 5 5 9 0 2-1 4-2 5l-1 4h-4l-1-4c-1-1-2-3-2-5 0-4 2-7 5-9z"/><circle cx="12" cy="9" r="1.6" fill="#161B26"/></svg>
-      <span id="eyebrowLabel">Workshop-Countdown</span>
-    </span>
-    <h1>Cloud-Migration von Bounded Contexts</h1>
-    <p class="sub" id="sub">Stelle die Startzeit ein und benenne die Contexts, die in dieser Session abheben.</p>
-
-    <!-- Modus: Countdown laufen lassen oder Pause bis zu einer Uhrzeit -->
-    <div class="mode-switch" role="tablist" aria-label="Modus w&auml;hlen">
-      <button type="button" data-mode="countdown" role="tab" aria-selected="true">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c3 2 5 5 5 9 0 2-1 4-2 5l-1 4h-4l-1-4c-1-1-2-3-2-5 0-4 2-7 5-9z"/></svg>
-        Countdown
-      </button>
-      <button type="button" data-mode="pause" role="tab" aria-selected="false">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9h11v4a5 5 0 0 1-5 5H10a5 5 0 0 1-5-5V9z"/><path d="M16 10h2a2 2 0 0 1 0 4h-2"/><path d="M8 3v2M11 3v2"/></svg>
-        Pause
-      </button>
-    </div>
-
-    <!-- ===== COUNTDOWN-Felder ===== -->
-    <div id="countdownFields">
-      <div class="field">
-        <label>T-Minus</label>
-        <div class="duration">
-          <div class="timebox">
-            <input type="number" id="min" min="0" max="599" value="5" inputmode="numeric" aria-label="Minuten">
-            <small>Minuten</small>
-          </div>
-          <span class="colon">:</span>
-          <div class="timebox">
-            <input type="number" id="sec" min="0" max="59" value="0" inputmode="numeric" aria-label="Sekunden">
-            <small>Sekunden</small>
-          </div>
-        </div>
-      </div>
-
-      <div class="field">
-        <label>Bounded Contexts (Payload)</label>
-        <textarea id="ctx" rows="2" placeholder="z. B. Orders, Billing, Inventory, Shipping"></textarea>
-        <p class="help">Kommagetrennt. Leer lassen &rarr; generische Platzhalter (Context 1, Context 2, &hellip;).</p>
-      </div>
-    </div>
-
-    <!-- ===== PAUSE-Felder ===== -->
-    <div id="pauseFields" class="hidden">
-      <div class="field">
-        <label>Weiter geht&rsquo;s um</label>
-        <div class="duration">
-          <div class="timebox">
-            <input type="number" id="hour" min="0" max="23" value="13" inputmode="numeric" aria-label="Stunde">
-            <small>Uhr (Std)</small>
-          </div>
-          <span class="colon">:</span>
-          <div class="timebox">
-            <input type="number" id="minute" min="0" max="59" value="0" inputmode="numeric" aria-label="Minute">
-            <small>Minute</small>
-          </div>
-        </div>
-        <div class="presets">
-          <button type="button" data-add="15">in 15 Min</button>
-          <button type="button" data-add="30">in 30 Min</button>
-          <button type="button" data-add="45">in 45 Min</button>
-          <button type="button" data-add="60">in 1 Std</button>
-        </div>
-        <p class="help err hidden" id="pauseErr"></p>
-      </div>
-
-      <div class="field">
-        <label>Anlass (optional)</label>
-        <input type="text" id="anlass" maxlength="40" placeholder="z. B. Mittagspause, Kaffeepause">
-        <p class="help">Erscheint klein &uuml;ber der gro&szlig;en Uhrzeit. Leer &rarr; &bdquo;Pause&ldquo;.</p>
-      </div>
-    </div>
-
-    <button class="start-btn" id="start">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c3 2 5 5 5 9 0 2-1 4-2 5l-1 4h-4l-1-4c-1-1-2-3-2-5 0-4 2-7 5-9z"/><circle cx="12" cy="9" r="1.6" fill="#fff"/></svg>
-      <span id="startLabel">Countdown starten</span>
-    </button>
-
-    <div class="privacy"><span class="dot"></span> 100 % lokal &middot; keine Server &middot; keine Speicherung</div>
-  </div>
-</section>
-
-<!-- =================== TIMER =================== -->
-<section id="timer" class="hidden">
-
-  <!-- Server-Rack -->
-  <div class="rack">
-    <svg viewBox="0 0 120 140" aria-hidden="true">
-      <!-- Tower 1 -->
-      <rect x="14" y="20" width="38" height="92" rx="4" fill="#2B2F38" stroke="#11141a" stroke-width="2"/>
-      <g fill="#3a3f4b"><rect x="19" y="26" width="28" height="8" rx="2"/><rect x="19" y="38" width="28" height="8" rx="2"/>
-        <rect x="19" y="50" width="28" height="8" rx="2"/><rect x="19" y="62" width="28" height="8" rx="2"/>
-        <rect x="19" y="74" width="28" height="8" rx="2"/><rect x="19" y="86" width="28" height="8" rx="2"/></g>
-      <circle cx="44" cy="30" r="1.6" fill="#5CD27A"/><circle cx="44" cy="54" r="1.6" fill="#7FE0FF"/>
-      <!-- Tower 2 -->
-      <rect x="58" y="34" width="34" height="78" rx="4" fill="#23272f" stroke="#11141a" stroke-width="2"/>
-      <g fill="#353a45"><rect x="63" y="40" width="24" height="7" rx="2"/><rect x="63" y="51" width="24" height="7" rx="2"/>
-        <rect x="63" y="62" width="24" height="7" rx="2"/><rect x="63" y="73" width="24" height="7" rx="2"/></g>
-      <circle cx="84" cy="44" r="1.5" fill="#F0C24A"/>
-      <!-- Kabel -->
-      <path d="M30 112 C 20 126, 60 124, 50 138" fill="none" stroke="#D4493B" stroke-width="3" stroke-linecap="round"/>
-      <path d="M44 112 C 70 124, 30 130, 64 138" fill="none" stroke="#3A6FD4" stroke-width="3" stroke-linecap="round"/>
-      <path d="M74 112 C 60 128, 96 126, 82 138" fill="none" stroke="#E8B84B" stroke-width="3" stroke-linecap="round"/>
-      <rect x="6" y="112" width="100" height="6" rx="3" fill="#1a1d24"/>
-    </svg>
-    <span class="tag">On-Premise</span>
-    <div class="payload" id="payload"></div>
-  </div>
-
-  <!-- Team am Boden: arbeiten und diskutieren -->
-  <div class="crew">
-    <svg viewBox="0 0 420 170" aria-hidden="true">
-      <ellipse cx="64" cy="153" rx="24" ry="5" fill="rgba(20,30,50,.16)"/>
-      <ellipse cx="156" cy="153" rx="24" ry="5" fill="rgba(20,30,50,.16)"/>
-      <ellipse cx="256" cy="153" rx="24" ry="5" fill="rgba(20,30,50,.16)"/>
-      <ellipse cx="352" cy="153" rx="24" ry="5" fill="rgba(20,30,50,.16)"/>
-
-      <!-- Person 1: zeigt nach oben -->
-      <rect x="55" y="112" width="7" height="40" rx="3" fill="#3a4658"/><rect x="64" y="112" width="7" height="40" rx="3" fill="#3a4658"/>
-      <rect x="51" y="74" width="26" height="42" rx="9" fill="#5C7FC0"/>
-      <path d="M53 80 L 49 106" stroke="#E8B58A" stroke-width="7" stroke-linecap="round" fill="none"/>
-      <path class="gestureA" d="M75 80 L 90 44" stroke="#E8B58A" stroke-width="7" stroke-linecap="round" fill="none"/>
-      <ellipse cx="64" cy="52" rx="12" ry="9" fill="#2b2b2b"/><circle cx="64" cy="58" r="11" fill="#E8B58A"/>
-
-      <!-- Person 2: haelt Klemmbrett -->
-      <rect x="147" y="112" width="7" height="40" rx="3" fill="#4a4a4a"/><rect x="156" y="112" width="7" height="40" rx="3" fill="#4a4a4a"/>
-      <rect x="143" y="74" width="26" height="42" rx="9" fill="#5F9450"/>
-      <path d="M145 82 L 152 100" stroke="#C68642" stroke-width="7" stroke-linecap="round" fill="none"/>
-      <path d="M167 82 L 168 100" stroke="#C68642" stroke-width="7" stroke-linecap="round" fill="none"/>
-      <ellipse cx="156" cy="52" rx="12" ry="9" fill="#5a3a1a"/><circle cx="156" cy="58" r="11" fill="#C68642"/>
-      <rect x="150" y="92" width="20" height="24" rx="2" fill="#fff" stroke="#aeb8c6" stroke-width="1.5"/>
-      <rect x="156" y="89" width="8" height="5" rx="1.5" fill="#9aa3b1"/>
-      <g fill="#c4ccd8"><rect x="153" y="98" width="14" height="2"/><rect x="153" y="103" width="14" height="2"/><rect x="153" y="108" width="9" height="2"/></g>
-
-      <!-- Person 3: Tablet + Geste -->
-      <rect x="247" y="112" width="7" height="40" rx="3" fill="#5a4a3a"/><rect x="256" y="112" width="7" height="40" rx="3" fill="#5a4a3a"/>
-      <rect x="243" y="74" width="26" height="42" rx="9" fill="#E0913C"/>
-      <path d="M245 82 L 252 98" stroke="#F1C7A5" stroke-width="7" stroke-linecap="round" fill="none"/>
-      <path class="gestureB" d="M267 82 L 280 66" stroke="#F1C7A5" stroke-width="7" stroke-linecap="round" fill="none"/>
-      <ellipse cx="256" cy="52" rx="12" ry="8" fill="#d9b46a"/><circle cx="256" cy="58" r="11" fill="#F1C7A5"/>
-      <rect x="248" y="92" width="18" height="13" rx="2" fill="#2b3340" stroke="#11141a" stroke-width="1.5"/>
-      <rect x="250" y="94" width="14" height="9" rx="1" fill="#5C7FC0" opacity=".55"/>
-
-      <!-- Person 4: begeistert, beide Arme hoch -->
-      <rect x="343" y="112" width="7" height="40" rx="3" fill="#3a4658"/><rect x="352" y="112" width="7" height="40" rx="3" fill="#3a4658"/>
-      <rect x="339" y="74" width="26" height="42" rx="9" fill="#C9483B"/>
-      <path d="M341 80 L 330 56" stroke="#8D5524" stroke-width="7" stroke-linecap="round" fill="none"/>
-      <path d="M363 80 L 374 56" stroke="#8D5524" stroke-width="7" stroke-linecap="round" fill="none"/>
-      <ellipse cx="352" cy="51" rx="12" ry="9" fill="#1a1a1a"/><circle cx="352" cy="58" r="11" fill="#8D5524"/>
-    </svg>
-  </div>
-
-  <!-- Rakete -->
-  <div class="rocket-wrap" id="rocketWrap">
-    <div class="rocket-bob">
-      <svg viewBox="0 0 100 210" aria-hidden="true">
-        <!-- Flamme (zweistufig animiert, durchgehend) -->
-        <g class="flame-throb" transform="translate(0,156)">
-         <g class="flame-flick">
-          <path d="M50 -4 C 32 32, 20 56, 50 92 C 80 56, 68 32, 50 -4 Z" fill="var(--flame-o)"/>
-          <path d="M50 6 C 38 30, 30 50, 50 76 C 70 50, 62 30, 50 6 Z" fill="var(--flame-y)"/>
-          <path d="M50 16 C 44 30, 41 44, 50 60 C 59 44, 56 30, 50 16 Z" fill="#fff" opacity=".75"/>
-         </g>
-        </g>
-        <!-- Koerper -->
-        <path d="M50 6 C 70 26, 74 60, 74 96 L 74 150 C 74 156, 70 160, 64 160 L 36 160 C 30 160, 26 156, 26 150 L 26 96 C 26 60, 30 26, 50 6 Z"
-              fill="var(--rocket)" stroke="var(--rocket-dk)" stroke-width="2.5"/>
-        <!-- Nasenspitze -->
-        <path d="M50 6 C 62 20, 68 40, 70 60 L 30 60 C 32 40, 38 20, 50 6 Z" fill="var(--rocket-dk)"/>
-        <!-- Glanz -->
-        <path d="M44 30 C 40 60, 40 110, 44 150" fill="none" stroke="var(--rocket-lt)" stroke-width="5" stroke-linecap="round" opacity=".55"/>
-        <!-- Fenster -->
-        <circle cx="50" cy="86" r="12" fill="var(--window)" stroke="var(--rocket-dk)" stroke-width="3"/>
-        <circle cx="46" cy="82" r="4" fill="#fff" opacity=".8"/>
-        <!-- Emblem (abstrakte Wolke, kein echtes Logo) -->
-        <g transform="translate(50,120)" fill="#fff" opacity=".92">
-          <ellipse cx="-6" cy="2" rx="7" ry="5"/><ellipse cx="4" cy="-2" rx="8" ry="6"/><ellipse cx="10" cy="3" rx="6" ry="4"/>
-          <rect x="-13" y="0" width="26" height="6" rx="3"/>
-        </g>
-        <!-- Finnen -->
-        <path d="M26 130 L 8 168 L 26 158 Z" fill="var(--fin)"/>
-        <path d="M74 130 L 92 168 L 74 158 Z" fill="var(--fin)"/>
-        <!-- Duese -->
-        <path d="M38 160 L 62 160 L 58 172 L 42 172 Z" fill="var(--rocket-dk)"/>
-      </svg>
-      <!-- durchgehendes Triebwerks-Abgas -->
-      <div class="exhaust"><i class="ember"></i><i class="ember"></i><i class="ember"></i><i class="ember"></i><i class="ember"></i><i class="ember"></i></div>
-    </div>
-  </div>
-
-  <!-- Cloud-Dock -->
-  <div class="dock-label"><span class="tag">Cloud</span></div>
-  <div class="cloud-dock" id="dock"></div>
-
-  <!-- Scoreboard -->
-  <div class="scoreboard">
-    <div class="tminus">T-Minus</div>
-    <div class="time" id="time">05:00</div>
-    <div class="progress"><div class="bar" id="bar"></div><div class="thumb" id="thumb">🚀</div></div>
-    <div class="count"><b id="inCloud">0</b> / <span id="total">0</span> Contexts migriert</div>
-  </div>
-
-  <div class="pause-ind" id="pause"><span class="bars"><i></i><i></i></span> Pausiert</div>
-
-  <div class="done" id="done">
-    <div class="big">Migration Complete!</div>
-    <div class="small">Alle Bounded Contexts sind in der Cloud angekommen.</div>
-    <div class="key">Beliebige Taste &middot; zur&uuml;ck zum Setup</div>
-  </div>
-
-  <div class="hint" id="hint">
-    <span><kbd>Leertaste</kbd> Pause</span>
-    <span><kbd>Klick</kbd> Pause</span>
-    <span><kbd>Esc</kbd> Beenden</span>
-  </div>
-</section>
-
-<!-- =================== PAUSE (Uhrzeit) =================== -->
-<section id="breakScreen" class="hidden">
-  <div class="break-panel">
-    <div class="coffee" aria-hidden="true">
-      <span class="steam"><i></i><i></i><i></i></span>
-      <svg viewBox="0 0 110 96">
-        <ellipse cx="50" cy="89" rx="40" ry="6" fill="#0a0d14"/>
-        <path d="M80 42 a17 17 0 0 1 0 28" fill="none" stroke="var(--led)" stroke-width="8" stroke-linecap="round"/>
-        <path d="M18 36 H82 V58 a32 27 0 0 1 -64 0 Z" fill="var(--window)" stroke="var(--led)" stroke-width="3"/>
-        <ellipse cx="50" cy="38" rx="31" ry="7" fill="var(--rocket)"/>
-      </svg>
-    </div>
-    <div class="break-anlass" id="bAnlass">Pause</div>
-    <div class="break-lead" id="bLead">Weiter geht&rsquo;s um</div>
-    <div class="break-time"><span id="bTime">13:00</span><span class="uhr" id="bUhr">Uhr</span></div>
-    <div class="break-sub">
-      <span>Jetzt&nbsp;<b id="bNow">--:--:--</b></span>
-      <span class="sep"></span>
-      <span id="bRemain">noch&nbsp;&ndash;</span>
-    </div>
-  </div>
-  <div class="hint" id="bHint">
-    <span><kbd>Esc</kbd> Beenden</span>
-  </div>
-</section>
-
-<!-- FX-Layer (gemeinsam fuer Countdown + Pause) -->
-<div class="fx" id="fx"></div>
-
 <script>
-(() => {
+(function(){
   "use strict";
-  const $ = id => document.getElementById(id);
-  const setup=$("setup"), timer=$("timer"), card=$("card");
-  const minIn=$("min"), secIn=$("sec"), ctxIn=$("ctx");
-  const payload=$("payload"), dock=$("dock"), fx=$("fx");
-  const timeEl=$("time"), barEl=$("bar"), thumbEl=$("thumb");
-  const inCloudEl=$("inCloud"), totalEl=$("total");
-  const pauseInd=$("pause"), doneEl=$("done"), hintEl=$("hint"), rocketWrap=$("rocketWrap");
+  var $=function(id){return document.getElementById(id);};
+  var startYear=new Date().getFullYear();
+  function bodyFont(){ return getComputedStyle(document.body).fontFamily; }
 
-  // ---- Pause-Modus (Uhrzeit) ----
-  const modeBtns=document.querySelectorAll(".mode-switch button");
-  const countdownFields=$("countdownFields"), pauseFields=$("pauseFields");
-  const hourIn=$("hour"), minuteIn=$("minute"), anlassIn=$("anlass"), pauseErr=$("pauseErr");
-  const eyebrowLabel=$("eyebrowLabel"), subEl=$("sub"), startLabel=$("startLabel");
-  const breakScreen=$("breakScreen");
-  const bAnlass=$("bAnlass"), bLead=$("bLead"), bTime=$("bTime"), bUhr=$("bUhr"),
-        bNow=$("bNow"), bRemain=$("bRemain"), bHint=$("bHint");
-
-  const REDUCE = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const pad = n => String(n).padStart(2,"0");
-
-  // Goldener Context-Cube als SVG (Top hell, Seiten dunkler)
-  function cube(){
-    return '<svg viewBox="0 0 100 100">'
-      + '<polygon points="50,6 92,30 50,54 8,30" fill="var(--gold-top)" stroke="var(--gold-line)" stroke-width="2"/>'
-      + '<polygon points="8,30 50,54 50,96 8,72" fill="var(--gold-l)" stroke="var(--gold-line)" stroke-width="2"/>'
-      + '<polygon points="92,30 50,54 50,96 92,72" fill="var(--gold-r)" stroke="var(--gold-line)" stroke-width="2"/>'
-      + '</svg>';
-  }
-
-  const state = {
-    mode:"setup", kind:"countdown", total:0, remaining:0, paused:false, last:0, raf:0,
-    contexts:[], anims:new Set(), suppressFs:false, hintTimer:0, cursorTimer:0,
-    ballastDone:0, target:0, label:"Pause", breakTimer:0, pauseErrTimer:0,
-    activeScreen:null, activeHint:null, pausePrefilled:false, wakeLock:null
+  var DEFAULTS = {
+    curLevel:'1', tgtLevel:'2',
+    total:55000, varMode:'pct', varPct:10, varEur:5400,
+    rn:6000, rl:6000, wait:12, coll:2.5, collDelay:1, hz:3,
+    lastRaise:'', infl:2.5, etf:7
   };
+  var state={};
+  for(var dk in DEFAULTS){ if(DEFAULTS.hasOwnProperty(dk)) state[dk]=DEFAULTS[dk]; }
 
-  // ---------- Start ----------
-  function start(){
-    const m=clampInt(minIn.value,0,599), s=clampInt(secIn.value,0,59);
-    const totalSec=m*60+s;
-    if(totalSec<=0){ card.classList.remove("shake"); void card.offsetWidth; card.classList.add("shake"); return; }
+  // Gehaltsbänder je Level (Zielgehalt = Fix+Variabel, in k EUR p.a.) + Benefit + erlaubter variabler Anteil (%)
+  var LEVELS=[
+    { id:'E', label:'Level E', min:30,    max:60,  benefit:1000,  varMin:0,  varMax:20 },
+    { id:'1', label:'Level 1', min:45,    max:75,  benefit:1000,  varMin:0,  varMax:20 },
+    { id:'2', label:'Level 2', min:59,    max:90,  benefit:2000,  varMin:5,  varMax:25 },
+    { id:'3', label:'Level 3', min:74,    max:110, benefit:3000,  varMin:5,  varMax:25 },
+    { id:'4', label:'Level 4', min:87,    max:140, benefit:6000,  varMin:10, varMax:30 },
+    { id:'5', label:'Level 5', min:107,   max:180, benefit:8500,  varMin:15, varMax:35 },
+    { id:'6', label:'Level 6', min:138.5, max:240, benefit:10000, varMin:20, varMax:40 }
+  ];
+  function levelById(id){ for(var i=0;i<LEVELS.length;i++){ if(LEVELS[i].id===id) return LEVELS[i]; } return null; }
 
-    let names = ctxIn.value.split(",").map(t=>t.trim()).filter(Boolean);
-    if(names.length===0) names=["Context 1","Context 2","Context 3"];
-    names=names.slice(0,20);
+  var fmtE=new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR',maximumFractionDigits:0});
+  function eur(v){ return fmtE.format(Math.round(v)); }
+  function kEUR(v){ return v.toLocaleString('de-DE',{maximumFractionDigits:1}); }
+  function pctTxt(part,whole){ if(!whole) return '–'; return (part/whole*100).toLocaleString('de-DE',{maximumFractionDigits:1})+' %'; }
 
-    buildContexts(names);
-    state.total=state.remaining=totalSec*1000;
-    state.paused=false; state.mode="running"; state.ballastDone=0;
-    state.kind="countdown"; state.activeScreen=timer; state.activeHint=hintEl;
-
-    setup.classList.add("hidden");
-    timer.classList.remove("hidden");
-    document.body.classList.remove("is-critical","is-complete");
-    doneEl.classList.remove("show");
-    rocketWrap.classList.remove("liftoff");
-    setPaused(false);
-    render(1);
-
-    requestFullscreen();
-    requestWakeLock();
-    scheduleHintFade(); armCursorHide();
-    state.last=performance.now();
-    state.raf=requestAnimationFrame(loop);
+  // ---- Aufschlüsselung Ist + Szenarien ----
+  function computeBand(){
+    var cur=levelById(state.curLevel), tgt=levelById(state.tgtLevel);
+    var benefit=cur?cur.benefit:0, benefitT=tgt?tgt.benefit:0;
+    var total=state.total||0;
+    var ziel=Math.max(0,total-benefit);
+    var variabel, varPct;
+    if(state.varMode==='eur'){ variabel=state.varEur||0; varPct=ziel>0?variabel/ziel*100:0; }
+    else { varPct=state.varPct||0; variabel=ziel*varPct/100; }
+    var fix=ziel-variabel;
+    var rn=state.rn||0, rl=state.rl||0;
+    var gJetzt=total+rn, gSpaet=total+rl;
+    return {cur:cur,tgt:tgt,benefit:benefit,benefitT:benefitT,total:total,ziel:ziel,
+      variabel:variabel,varPct:varPct,fix:fix,
+      gJetzt:gJetzt,gSpaet:gSpaet,
+      zielJetzt:Math.max(0,gJetzt-benefitT), zielSpaet:Math.max(0,gSpaet-benefitT)};
   }
 
-  function buildContexts(names){
-    payload.innerHTML=""; dock.innerHTML="";
-    state.contexts = names.map(name => {
-      const pc=document.createElement("div");
-      pc.className="pcube"; pc.innerHTML=cube();
-      payload.appendChild(pc);
+  // ---- Kennzahlen (intern monatlich; Eingaben sind jährliches Gesamtgehalt) ----
+  function calc(){
+    var s0=(state.total||0)/12, rn=(state.rn||0)/12, rl=(state.rl||0)/12;
+    var w=state.wait, H=state.hz*12;
+    var sNow=s0+rn, sLater=s0+rl;
+    var g=(state.coll||0)/100, D=state.collDelay||0;
 
-      const slot=document.createElement("div");
-      slot.className="slot";
-      slot.innerHTML='<div class="cube-h">'+cube()+'</div><div class="name">'+esc(name)+'</div>';
-      dock.appendChild(slot);
+    var maxM=Math.max(H,1200);
+    var arrNow=new Array(maxM+1), arrWait=new Array(maxM+1);
+    var salNowArr=new Array(maxM+1), salWaitArr=new Array(maxM+1);
+    arrNow[0]=0; arrWait[0]=0; salNowArr[0]=sNow; salWaitArr[0]=s0;
+    var cn=0,cw=0,fAll=0,fAfter=0;
+    for(var j=1;j<=maxM;j++){
+      var f=Math.pow(1+g, Math.max(0, Math.floor((j-1)/12)-D));
+      var sN=sNow*f, sW=(j<=w?s0:sLater)*f;
+      cn+=sN; cw+=sW; arrNow[j]=cn; arrWait[j]=cw; salNowArr[j]=sN; salWaitArr[j]=sW;
+      if(j<=H){ fAll+=f; if(j>w) fAfter+=f; }
+    }
+    var loss=arrNow[w]-arrWait[w];
+    var breakMonth=null;
+    if(rl>rn){
+      for(var m=Math.max(1,w);m<=maxM;m++){
+        if(arrWait[m]>=arrNow[m]){
+          var d0=arrNow[m-1]-arrWait[m-1], d1=arrNow[m]-arrWait[m];
+          breakMonth=(m-1)+((d0===d1)?0:d0/(d0-d1)); break;
+        }
+      }
+    }
+    var needLater=(H>w&&fAfter>0)?rn*fAll/fAfter:Infinity; // monatlich
+    return {s0:s0,rn:rn,rl:rl,w:w,H:H,sNow:sNow,sLater:sLater,g:g,D:D,
+      loss:loss,breakMonth:breakMonth,needLater:needLater,diffEnd:arrNow[H]-arrWait[H],
+      arrNow:arrNow,arrWait:arrWait,salNowArr:salNowArr,salWaitArr:salWaitArr};
+  }
+  function cumOf(arr,m){ if(m<=0)return arr[0]; if(m>=arr.length-1)return arr[arr.length-1];
+    var lo=Math.floor(m); return arr[lo]+(arr[lo+1]-arr[lo])*(m-lo); }
 
-      return {name, pcube:pc, slot, done:false};
+  function monthsSince(dateStr){
+    if(!dateStr) return null;
+    var d=new Date(dateStr); if(isNaN(d.getTime())) return null;
+    var now=new Date();
+    var m=(now.getFullYear()-d.getFullYear())*12 + (now.getMonth()-d.getMonth());
+    if(now.getDate()<d.getDate()) m-=1;
+    return Math.max(0,m);
+  }
+
+  // ================= RENDER =================
+  function render(){
+    var c=calc(), b=computeBand();
+    renderIst(b);
+    renderVerdict(c);
+    renderStandstill();
+    renderMoney(c);
+    renderDev(b);
+    drawCumulative(c);
+    renderTable(c);
+    drawSalary(c);
+    save();
+  }
+
+  function renderMoney(c){
+    var H=c.H, r=(state.etf||0)/100, infl=(state.infl||0)/100;
+    var realFactor=Math.pow(1+infl, H/12);
+    // Endwert des Einkommens-Unterschieds, jeder Monatsbetrag bis zum Ende mit r angelegt
+    var inv=0;
+    for(var m=1;m<=H;m++){ inv += (c.salNowArr[m]-c.salWaitArr[m])*Math.pow(1+r,(H-m)/12); }
+    var nominal=c.diffEnd;
+    function put(id,val){ var el=$(id); el.textContent=eur(val);
+      el.style.color = (val>1?'var(--loss)':(val<-1?'var(--gain)':'var(--ink)')); }
+    var pf=function(x){ return (x||0).toLocaleString('de-DE',{maximumFractionDigits:1}); };
+    put('m-nominal', nominal);
+    $('m-etf-k').textContent='inkl. entgangener Rendite bei '+pf(state.etf)+' %';
+    put('m-etf', inv);
+    $('m-real-k').textContent='in heutiger Kaufkraft (Inflation '+pf(state.infl)+' %)';
+    put('m-real', inv/realFactor);
+    $('m-note').innerHTML='Früher erhaltenes Geld ist mehr wert: Es lässt sich anlegen und verliert weniger durch Inflation. '+
+      'Die Prozentsätze sind grobe Langfrist-Durchschnitte – keine Garantie; Anlagen schwanken und können verlieren.';
+  }
+
+  function renderStandstill(){
+    var ms=monthsSince(state.lastRaise);
+    $('since-hint').textContent = (ms===null)
+      ? 'Datum wählen, um deinen bisherigen Stillstand zu sehen.'
+      : ('Das sind '+ms+' Monate ohne Erhöhung.');
+    var st=$('standstill');
+    if(ms===null){ st.style.display='none'; st.innerHTML=''; return; }
+    st.style.display='';
+    var tot=ms+(state.wait||0);
+    st.innerHTML='Du wartest bereits <b style="color:var(--ink)">'+ms+' Monate</b> auf eine Erhöhung. '+
+      'Mit „später" ('+(state.wait||0)+' Mon. warten) wären es zusammen <b style="color:var(--ink)">'+tot+' Monate</b> ohne Erhöhung.';
+  }
+
+  function badge(kind,text){ var d=(kind==='info')?'':'<span class="dot"></span>';
+    return '<div class="badge '+kind+'">'+d+'<span>'+text+'</span></div>'; }
+
+  // ---- Schritt 1 ----
+  function renderIst(b){
+    $('bc-gesamt').textContent  = eur(b.total)+' p.a.';
+    $('bc-benefit').textContent = b.cur ? eur(b.benefit)+' · Level '+b.cur.id : '–';
+    $('bc-ziel').textContent    = eur(b.ziel)+' p.a.';
+    $('bc-var').textContent     = eur(b.variabel)+' ('+b.varPct.toLocaleString('de-DE',{maximumFractionDigits:1})+' %)';
+    $('bc-fix').textContent     = eur(b.fix);
+
+    var zk=b.ziel/1000, html='';
+    if(b.cur){
+      if(zk>=b.cur.min && zk<=b.cur.max){
+        html+=badge('ok','Im Gehaltsband von Level '+b.cur.id+' ('+kEUR(b.cur.min)+'–'+kEUR(b.cur.max)+' k €)');
+      } else {
+        var where=zk<b.cur.min?'unter':'über';
+        html+=badge('warn','Nicht im Gehaltsband! Zielgehalt '+eur(b.ziel)+' liegt '+where+' dem Band von Level '+b.cur.id+' ('+kEUR(b.cur.min)+'–'+kEUR(b.cur.max)+' k €)');
+      }
+      if(b.varPct>=b.cur.varMin && b.varPct<=b.cur.varMax){
+        html+=badge('ok','Variabler Anteil im Rahmen ('+b.cur.varMin+'–'+b.cur.varMax+' % erlaubt)');
+      } else {
+        var w2=b.varPct<b.cur.varMin?'zu niedrig':'zu hoch';
+        html+=badge('warn','Variabler Anteil '+w2+' ('+b.cur.varMin+'–'+b.cur.varMax+' % erlaubt)');
+      }
+      if(b.fix<0) html+=badge('warn','Variabler Anteil größer als das Zielgehalt – bitte Eingaben prüfen.');
+    }
+    $('bc-status').innerHTML=html;
+
+    var sMax=40;
+    $('share-allow').style.left  = (b.cur? b.cur.varMin/sMax*100:0)+'%';
+    $('share-allow').style.width = (b.cur? (b.cur.varMax-b.cur.varMin)/sMax*100:0)+'%';
+    $('share-mk').style.left='calc('+Math.max(0,Math.min(100,b.varPct/sMax*100))+'% - 1.5px)';
+    $('share-bar').classList.toggle('bad', !!(b.cur && (b.varPct<b.cur.varMin||b.varPct>b.cur.varMax)));
+
+    var inBand=b.cur && zk>=b.cur.min && zk<=b.cur.max;
+    var col=inBand?getCss('--now'):getCss('--loss');
+    drawBands('cband1', [{k:zk,color:col}], state.curLevel, null);
+    $('band1-legend').innerHTML='<span style="color:'+col+'">● Dein Zielgehalt: '+kEUR(zk)+' k €</span>';
+  }
+
+  // ---- Schritt 2 ----
+  function renderDev(b){
+    $('rn-hint').textContent = '→ Gesamt '+eur(b.gJetzt)+' · '+pctTxt(state.rn||0, b.total||1)+' mehr';
+    $('rl-hint').textContent = '→ Gesamt '+eur(b.gSpaet)+' · '+pctTxt(state.rl||0, b.total||1)+' mehr';
+    $('wait-lbl').textContent = state.wait+' Monate';
+    $('hz-lbl').textContent = state.hz+' Jahre';
+    var g=(state.coll||0)/100, D=state.collDelay||0, firstYear=startYear+(D+1);
+    $('coll-hint').textContent = g>0 ? ('+'+eur((b.total)*g)+' / Jahr je Runde') : 'deaktiviert';
+    $('coll-delay-lbl').textContent = g<=0 ? '—' : ((D===0?'läuft jährlich':'pausiert '+D+' J.')+' · ab '+firstYear);
+
+    var mk=[
+      {k:b.ziel/1000,      color:getCss('--ist')},
+      {k:b.zielJetzt/1000, color:getCss('--now')},
+      {k:b.zielSpaet/1000, color:getCss('--mark')}
+    ];
+    drawBands('cband2', mk, state.curLevel, state.tgtLevel);
+    $('band2-legend').innerHTML=
+      '<span style="color:'+getCss('--ist')+'">● Ist '+kEUR(b.ziel/1000)+' k</span>'+
+      '<span style="color:'+getCss('--now')+'">● Jetzt '+kEUR(b.zielJetzt/1000)+' k</span>'+
+      '<span style="color:'+getCss('--mark')+'">● Später '+kEUR(b.zielSpaet/1000)+' k</span>';
+  }
+
+  // ---- Schritt 3: Verdict + Tabelle ----
+  function renderVerdict(c){
+    $('r-loss').textContent = eur(c.loss);
+    $('r-need').innerHTML = isFinite(c.needLater)
+      ? (eur(c.needLater*12)+' <small>/ Jahr · '+pctTxt(c.needLater, c.s0)+'</small>') : '–';
+
+    var bEl=$('r-break');
+    if(c.rl<=c.rn){ bEl.innerHTML='nie <small>im Modell</small>'; bEl.style.color='var(--loss)'; }
+    else if(c.breakMonth===null||c.breakMonth>c.H){ bEl.innerHTML='&gt; '+state.hz+' J. <small>außerhalb</small>'; bEl.style.color='var(--mark)'; }
+    else { var bm=Math.ceil(c.breakMonth); bEl.innerHTML='Monat '+bm+' <small>'+(bm/12).toLocaleString('de-DE',{maximumFractionDigits:1})+' J.</small>'; bEl.style.color='var(--ink)'; }
+
+    var v=$('r-verdict');
+    if(c.rl<c.rn){ v.innerHTML='<b>Doppelt schlecht:</b> Die spätere Erhöhung ist sogar kleiner. Du fällst immer weiter zurück – Warten ist hier reiner Verlust.'; }
+    else if(c.rl-c.rn<1/12){ v.innerHTML='<b>Du holst den Rückstand nie auf.</b> Bei gleich großer Erhöhung bleibt diese Lücke für immer bestehen. Warten kostet '+eur(c.loss)+' geschenkt.'; }
+    else if(c.breakMonth===null||c.breakMonth>c.H){
+      var jr=(c.breakMonth===null)?null:c.breakMonth/12;
+      v.innerHTML = jr ? ('Erst <b>nach '+jr.toLocaleString('de-DE',{maximumFractionDigits:1})+' Jahren</b> wärst du wieder gleichauf – außerhalb deines Betrachtungszeitraums. Bis dahin liegst du hinten.')
+                       : 'Der Rückstand wird im Modell praktisch nicht aufgeholt. Bis dahin liegst du durchgehend hinten.';
+    } else { v.innerHTML='Die spätere Erhöhung ist groß genug: Gleichstand bei <b>Monat '+Math.ceil(c.breakMonth)+'</b>. Erst danach lohnt sich das Warten überhaupt.'; }
+
+    $('set-break').disabled=!isFinite(c.needLater);
+  }
+
+  function renderTable(c){
+    var years=Math.round(c.H/12), rows='';
+    var beYear=(c.breakMonth!=null&&c.breakMonth<=c.H)?Math.ceil(c.breakMonth/12):null;
+    for(var y=1;y<=years;y++){
+      var m=y*12, nowC=c.arrNow[m], waitC=c.arrWait[m], gap=nowC-waitC;
+      var gcls=gap>1?'gap-pos':(gap<-1?'gap-neg':'');
+      var gtxt=(gap>1?'−':(gap<-1?'+':''))+eur(Math.abs(gap));
+      rows+='<tr'+(beYear===y?' class="be"':'')+'><td>'+(startYear+y)+'</td><td>'+eur(nowC)+'</td><td>'+eur(waitC)+'</td><td class="'+gcls+'">'+gtxt+'</td></tr>';
+    }
+    $('num-body').innerHTML=rows;
+    $('num-cap').innerHTML='∑ = bis dahin insgesamt verdientes Gesamtgehalt. <span class="gap-pos">Rückstand −</span> = du liegst hinten, '+
+      '<span class="gap-neg">+</span> = du hast aufgeholt. ◆ markiert das Jahr des Gleichstands.';
+  }
+
+  // ---------- Canvas-Helfer ----------
+  function setup(canvas,cssH){
+    var dpr=window.devicePixelRatio||1, cssW=canvas.parentElement.clientWidth;
+    canvas.style.height=cssH+'px'; canvas.width=Math.round(cssW*dpr); canvas.height=Math.round(cssH*dpr);
+    var ctx=canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); return {ctx:ctx,w:cssW,h:cssH};
+  }
+  function niceCeil(v){ if(v<=0)return 1; var mag=Math.pow(10,Math.floor(Math.log10(v))), n=v/mag;
+    var step=n<=1?1:n<=2?2:n<=2.5?2.5:n<=5?5:10; return step*mag; }
+  function getCss(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+  function line(ctx,pts,color,wd){ ctx.strokeStyle=color; ctx.lineWidth=wd; ctx.lineJoin='round'; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]); for(var i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]); ctx.stroke(); }
+  function dot(ctx,x,y,color,r){ r=r||4; ctx.fillStyle=color; ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x,y,r-2,0,7); ctx.fill(); }
+  function fillBetween(ctx,top,bot,m0,m1,X,color){
+    var x0=X(m0),x1=X(m1);
+    function sl(p){ return p.filter(function(q){return q[0]>=x0-0.5&&q[0]<=x1+0.5;}); }
+    var t=sl(top),b=sl(bot); if(t.length<1||b.length<1)return;
+    ctx.fillStyle=color; ctx.beginPath(); ctx.moveTo(t[0][0],t[0][1]);
+    for(var i=1;i<t.length;i++)ctx.lineTo(t[i][0],t[i][1]);
+    for(var j=b.length-1;j>=0;j--)ctx.lineTo(b[j][0],b[j][1]); ctx.closePath(); ctx.fill();
+  }
+  function roundRect(ctx,x,y,w,h,r){ r=Math.min(r,h/2,w/2); ctx.beginPath();
+    ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+  var PADL=52,PADR=12,PADT=14,PADB=26;
+  function drawXAxis(ctx,W,Hh,H,X){
+    ctx.strokeStyle='#D9DFE8'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(PADL,Hh-PADB); ctx.lineTo(W-PADR,Hh-PADB); ctx.stroke();
+    ctx.fillStyle='#9AA6B6'; ctx.font='11px '+bodyFont(); ctx.textAlign='center'; ctx.textBaseline='top';
+    var years=Math.round(H/12), stepY=years<=6?1:2;
+    for(var y=0;y<=years;y+=stepY){ var x=X(y*12);
+      ctx.strokeStyle='#EDF0F5'; ctx.beginPath(); ctx.moveTo(x,PADT); ctx.lineTo(x,Hh-PADB); ctx.stroke();
+      ctx.fillStyle='#9AA6B6'; ctx.fillText(startYear+y,x,Hh-PADB+6); }
+  }
+
+  // ---- Gesamtgehalt pro Jahr (Treppe) ----
+  function drawSalary(c){
+    var canvas=$('c1'), s=setup(canvas,200), ctx=s.ctx, W=s.w, Hh=s.h, H=c.H;
+    var ymin=Infinity,ymax=0;
+    for(var j=0;j<=H;j++){ var a=c.salNowArr[j],b=c.salWaitArr[j];
+      if(a<ymin)ymin=a; if(b<ymin)ymin=b; if(a>ymax)ymax=a; if(b>ymax)ymax=b; }
+    var pad=(ymax-ymin)*0.22||ymax*0.1, lo=Math.max(0,ymin-pad), hi=ymax+pad;
+    function X(m){ return PADL+(m/H)*(W-PADL-PADR); }
+    function Y(v){ return PADT+(1-(v-lo)/(hi-lo))*(Hh-PADT-PADB); }
+    ctx.clearRect(0,0,W,Hh); ctx.font='11px '+bodyFont(); ctx.textBaseline='middle';
+    for(var i=0;i<=4;i++){ var val=lo+(hi-lo)*i/4, y=Y(val);
+      ctx.strokeStyle='#EDF0F5'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(PADL,y); ctx.lineTo(W-PADR,y); ctx.stroke();
+      ctx.fillStyle='#9AA6B6'; ctx.textAlign='right';
+      var dv=val*12; ctx.fillText(dv>=1000?(Math.round(dv/100)/10).toLocaleString('de-DE',{maximumFractionDigits:1})+'k':Math.round(dv),PADL-8,y); }
+    drawXAxis(ctx,W,Hh,H,X);
+    function stair(arr,color){ var pts=[]; for(var j=1;j<=H;j++){ pts.push([X(j-1),Y(arr[j])]); pts.push([X(j),Y(arr[j])]); } line(ctx,pts,color,2.5); }
+    stair(c.salWaitArr,getCss('--later')); stair(c.salNowArr,getCss('--now'));
+    dot(ctx,X(c.w),Y(c.salWaitArr[Math.min(c.w+1,H)]),getCss('--later'));
+  }
+
+  // ---- Kumuliert ----
+  function drawCumulative(c){
+    var canvas=$('c2'), s=setup(canvas,240), ctx=s.ctx, W=s.w, Hh=s.h, H=c.H;
+    var cumNow=function(m){return cumOf(c.arrNow,m);}, cumWait=function(m){return cumOf(c.arrWait,m);};
+    var hi=niceCeil(Math.max(c.arrNow[H],c.arrWait[H]));
+    function X(m){ return PADL+(m/H)*(W-PADL-PADR); }
+    function Y(v){ return PADT+(1-v/hi)*(Hh-PADT-PADB); }
+    ctx.clearRect(0,0,W,Hh); ctx.font='11px '+bodyFont(); ctx.textBaseline='middle';
+    for(var i=0;i<=4;i++){ var val=hi*i/4, y=Y(val);
+      ctx.strokeStyle='#EDF0F5'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(PADL,y); ctx.lineTo(W-PADR,y); ctx.stroke();
+      ctx.fillStyle='#9AA6B6'; ctx.textAlign='right'; ctx.fillText((val/1000).toLocaleString('de-DE',{maximumFractionDigits:0})+'k',PADL-8,y); }
+    drawXAxis(ctx,W,Hh,H,X);
+    var ptsNow=[],ptsWait=[];
+    for(var j=0;j<=H;j++){ ptsNow.push([X(j),Y(c.arrNow[j])]); ptsWait.push([X(j),Y(c.arrWait[j])]); }
+    var bx=(c.breakMonth!==null&&c.breakMonth<=H)?c.breakMonth:null;
+    fillBetween(ctx,ptsNow,ptsWait,0,bx!==null?bx:H,X,'rgba(226,69,42,0.13)');
+    if(bx!==null) fillBetween(ctx,ptsWait,ptsNow,bx,H,X,'rgba(22,163,74,0.12)');
+    line(ctx,ptsWait,getCss('--later'),2.5); line(ctx,ptsNow,getCss('--now'),2.5);
+    dot(ctx,X(c.w),Y(cumWait(c.w)),getCss('--later'));
+    if(bx!==null){
+      var px=X(bx),py=Y(cumNow(bx));
+      ctx.strokeStyle=getCss('--mark'); ctx.lineWidth=1.5; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(px,PADT); ctx.lineTo(px,Hh-PADB); ctx.stroke(); ctx.setLineDash([]);
+      dot(ctx,px,py,getCss('--mark'),5);
+      ctx.fillStyle=getCss('--mark'); ctx.font='600 11px '+bodyFont(); ctx.textAlign=px>W-90?'right':'left'; ctx.textBaseline='bottom';
+      ctx.fillText('Gleichstand',px+(px>W-90?-6:6),PADT+12);
+    } else {
+      var mid=Math.min(H,c.w+(H-c.w)*0.45);
+      ctx.fillStyle=getCss('--loss'); ctx.font='600 11px '+bodyFont(); ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('Rückstand bleibt',X(mid),(Y(cumNow(mid))+Y(cumWait(mid)))/2);
+    }
+    setupScrubber(canvas,c,X,Y,cumNow,cumWait,W,Hh);
+  }
+
+  // ---- Gehaltsband-Diagramm (mehrere Marker) ----
+  function drawBands(canvasId, markers, hlCur, hlTgt){
+    var canvas=$(canvasId), s=setup(canvas, 22+LEVELS.length*30), ctx=s.ctx, W=s.w, Hh=s.h;
+    var maxK=250, Lp=30, Rp=10, Tp=10, Bp=20;
+    function X(k){ return Lp+(Math.min(k,maxK)/maxK)*(W-Lp-Rp); }
+    var rowH=(Hh-Tp-Bp)/LEVELS.length;
+    ctx.clearRect(0,0,W,Hh); ctx.font='11px '+bodyFont();
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    for(var k=0;k<=maxK;k+=50){ var x=X(k); ctx.strokeStyle='#EDF0F5'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(x,Tp); ctx.lineTo(x,Hh-Bp); ctx.stroke(); ctx.fillStyle='#9AA6B6'; ctx.fillText(k,x,Hh-Bp+5); }
+    for(var i=0;i<LEVELS.length;i++){
+      var lv=LEVELS[LEVELS.length-1-i], cy=Tp+i*rowH+rowH/2;
+      ctx.fillStyle='#67748A'; ctx.textAlign='right'; ctx.textBaseline='middle'; ctx.font='600 11px '+bodyFont();
+      ctx.fillText(lv.id,Lp-6,cy);
+      var x0=X(lv.min), x1=X(lv.max), bh=Math.min(15,rowH*0.52);
+      var color=(lv.id===hlCur)?'rgba(15,166,126,.85)':(lv.id===hlTgt)?'rgba(217,151,26,.9)':'#C9D2DE';
+      ctx.fillStyle=color; roundRect(ctx,x0,cy-bh/2,Math.max(2,x1-x0),bh,3); ctx.fill();
+    }
+    (markers||[]).forEach(function(mk){
+      if(!mk||mk.k<=0) return; var x=X(mk.k);
+      ctx.strokeStyle=mk.color; ctx.lineWidth=2; ctx.setLineDash([3,3]);
+      ctx.beginPath(); ctx.moveTo(x,Tp+4); ctx.lineTo(x,Hh-Bp); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle=mk.color; ctx.beginPath(); ctx.moveTo(x-4,Tp); ctx.lineTo(x+4,Tp); ctx.lineTo(x,Tp+5); ctx.closePath(); ctx.fill();
     });
-    totalEl.textContent=state.contexts.length;
-    inCloudEl.textContent="0";
   }
 
-  // ---------- Loop ----------
-  function loop(now){
-    if(state.mode!=="running") return;
-    const dt=now-state.last; state.last=now;
-    if(!state.paused){
-      state.remaining-=dt;
-      if(state.remaining<=0){ state.remaining=0; render(0); complete(); return; }
+  // ---- Scrubber ----
+  var tip=null;
+  function ensureTip(){ if(tip)return tip; tip=document.createElement('div');
+    tip.style.cssText='position:fixed;z-index:50;background:#141E2C;color:#fff;font:600 12px/1.4 '+bodyFont()+';padding:8px 10px;border-radius:9px;pointer-events:none;transform:translate(-50%,-115%);white-space:nowrap;box-shadow:0 6px 20px rgba(0,0,0,.18);opacity:0;transition:opacity .1s;';
+    document.body.appendChild(tip); return tip; }
+  function setupScrubber(canvas,c,X,Y,cumNow,cumWait,W,Hh){
+    var H=c.H;
+    function move(e){
+      var pt=e.touches?e.touches[0]:e, rect=canvas.getBoundingClientRect(), px=pt.clientX-rect.left;
+      if(px<PADL||px>W-PADR){ hide(); return; }
+      var m=Math.max(0,Math.min(H,(px-PADL)/(W-PADL-PADR)*H)), now=cumNow(m), wait=cumWait(m), gap=now-wait;
+      var t=ensureTip(), mm=Math.round(m), sign=gap>0?'Rückstand ':(gap<0?'Vorsprung ':'');
+      t.innerHTML='Monat '+mm+' · '+(startYear+Math.floor(mm/12))+
+        '<br><span style="color:'+getCss('--now')+'">jetzt:</span> '+eur(now)+
+        '<br><span style="color:'+getCss('--later')+'">später:</span> '+eur(wait)+
+        '<br><b style="color:'+(gap>0?'#FF8A6E':(gap<0?'#86EFAC':'#fff'))+'">'+(gap===0?'gleichauf':sign+eur(Math.abs(gap)))+'</b>';
+      t.style.left=pt.clientX+'px'; t.style.top=(rect.top+Y(Math.min(now,wait)))+'px'; t.style.opacity='1';
+      if(e.cancelable)e.preventDefault();
     }
-    const frac=state.remaining/state.total;
-    render(frac);
-    document.body.classList.toggle("is-critical", state.remaining>0 && state.remaining<=60000);
-    if(!state.paused) checkMigrations(1-frac);
-    state.raf=requestAnimationFrame(loop);
+    function hide(){ if(tip)tip.style.opacity='0'; }
+    canvas.onmousemove=move; canvas.onmouseleave=hide; canvas.ontouchstart=move; canvas.ontouchmove=move; canvas.ontouchend=hide;
   }
 
-  function render(frac){
-    const secs=Math.ceil(state.remaining/1000);
-    timeEl.textContent=pad(Math.floor(secs/60))+":"+pad(secs%60);
-    const elapsed=clamp(1-frac,0,1);
-    barEl.style.width=(elapsed*100)+"%";
-    thumbEl.style.left=(elapsed*100)+"%";
+  // ================= BEDIENUNG =================
+  (function fillSelects(){
+    ['cur-level','tgt-level'].forEach(function(id){ var sel=$(id);
+      for(var i=LEVELS.length-1;i>=0;i--){ var o=document.createElement('option'); o.value=LEVELS[i].id; o.textContent=LEVELS[i].label; sel.appendChild(o); } });
+  })();
+
+  function bindChips(containerId,attr,key){
+    $(containerId).querySelectorAll('.chip').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        state[key]=parseFloat(btn.getAttribute(attr));
+        $(containerId).querySelectorAll('.chip').forEach(function(b){b.classList.remove('on');});
+        btn.classList.add('on'); render();
+      });
+    });
   }
+  function markChip(containerId,attr,val){ $(containerId).querySelectorAll('.chip').forEach(function(b){ b.classList.toggle('on',parseFloat(b.getAttribute(attr))===val); }); }
 
-  function checkMigrations(elapsed){
-    const n=state.contexts.length;
-    state.contexts.forEach((c,i)=>{ if(!c.done && elapsed>=(i+0.5)/n) migrate(i,false); });
-    // Ballast abwerfen (Komplexitaet / Alt-Lasten) bei ~33% und ~66%
-    if(state.ballastDone<1 && elapsed>=0.33){ state.ballastDone=1; dropBallast("Komplexität"); }
-    if(state.ballastDone<2 && elapsed>=0.66){ state.ballastDone=2; dropBallast("Alt-Lasten"); }
+  function num(el){ var v=parseFloat(el.value.replace(',','.')); return isNaN(v)?0:v; }
+
+  $('cur-level').addEventListener('change',function(){ state.curLevel=this.value; render(); });
+  $('tgt-level').addEventListener('change',function(){ state.tgtLevel=this.value; render(); });
+  $('total').addEventListener('input',function(){ state.total=num(this); render(); });
+  $('rn').addEventListener('input',function(){ state.rn=num(this); render(); });
+  $('rl').addEventListener('input',function(){ state.rl=num(this); render(); });
+  $('coll').addEventListener('input',function(){ state.coll=num(this); render(); });
+  $('infl').addEventListener('input',function(){ state.infl=num(this); render(); });
+  $('etf').addEventListener('input',function(){ state.etf=num(this); render(); });
+  $('varval').addEventListener('input',function(){ if(state.varMode==='eur') state.varEur=num(this); else state.varPct=num(this); render(); });
+  $('last-raise').addEventListener('change',function(){ state.lastRaise=this.value||''; render(); });
+
+  // Variabler-Anteil-Umschalter (€/%)
+  function applyVarModeUI(){
+    var isEur=state.varMode==='eur';
+    $('varmode-seg').querySelectorAll('button').forEach(function(b){ b.classList.toggle('on',b.getAttribute('data-vm')===state.varMode); });
+    $('varval-pre').style.display=isEur?'':'none';
+    $('varval-post').style.display=isEur?'none':'';
+    $('lbl-varval').textContent=isEur?'Variabler Anteil (€ / Jahr)':'Variabler Anteil (%)';
+    $('varval').step=isEur?500:0.5;
+    $('varval').value=isEur?Math.round(state.varEur):state.varPct;
   }
-
-  // ---------- Migration: Cube startet ins Cloud-Dock ----------
-  function migrate(i, instant){
-    const c=state.contexts[i];
-    if(c.done) return; c.done=true;
-    inCloudEl.textContent=state.contexts.filter(x=>x.done).length;
-
-    if(instant || REDUCE){ c.pcube.classList.add("launched"); reveal(c); return; }
-
-    const s=centerOf(c.pcube), d=centerOf(c.slot.querySelector(".cube-h"));
-    c.pcube.classList.add("launched");
-
-    // Flammen-Puff am Start
-    flamePuff(s.x, s.y+8);
-
-    // fliegender Cube
-    const fly=document.createElement("div");
-    fly.className="fly";
-    fly.style.left=s.x+"px"; fly.style.top=s.y+"px";
-    fly.style.width=getComputedStyle(c.pcube).width;
-    fly.innerHTML=cube();
-    fx.appendChild(fly);
-
-    const dx=d.x-s.x, dy=d.y-s.y;
-    const arc=-Math.max(80,Math.abs(dy)*0.3);
-    const a=fly.animate([
-      {transform:"translate(-50%,-50%) translate(0,0) rotate(0deg) scale(1)"},
-      {transform:`translate(-50%,-50%) translate(${dx*0.5+(Math.random()-0.5)*40}px, ${dy*0.5+arc}px) rotate(180deg) scale(1.05)`, offset:0.55},
-      {transform:`translate(-50%,-50%) translate(${dx}px, ${dy}px) rotate(360deg) scale(1)`, opacity:1}
-    ], {duration:1500, easing:"cubic-bezier(.4,0,.25,1)", fill:"forwards"});
-    track(a);
-    a.finished.then(()=>{ fly.remove(); reveal(c); }, ()=>{});
-
-    // kleiner Funkenschweif
-    for(let k=0;k<4;k++){
-      const sp=document.createElement("div");
-      sp.className="puff"; sp.style.width="8px"; sp.style.height="8px";
-      sp.style.left=s.x+"px"; sp.style.top=s.y+"px";
-      fx.appendChild(sp);
-      const b=sp.animate([
-        {transform:"translate(-50%,-50%) scale(1)",opacity:.9},
-        {transform:`translate(-50%,-50%) translate(${(Math.random()-0.5)*30}px,${20+Math.random()*30}px) scale(0)`,opacity:0}
-      ],{duration:600,delay:k*40,easing:"ease-out",fill:"forwards"});
-      track(b); b.finished.then(()=>sp.remove(),()=>sp.remove());
-    }
-  }
-
-  function reveal(c){ c.slot.classList.add("arrived"); }
-
-  function flamePuff(x,y){
-    const p=document.createElement("div");
-    p.className="puff"; p.style.left=x+"px"; p.style.top=y+"px";
-    fx.appendChild(p);
-    const a=p.animate([
-      {transform:"translate(-50%,-50%) scale(.4)",opacity:1},
-      {transform:"translate(-50%,-50%) translateY(14px) scale(1.4)",opacity:0}
-    ],{duration:520,easing:"ease-out",fill:"forwards"});
-    track(a); a.finished.then(()=>p.remove(),()=>p.remove());
-  }
-
-  function dropBallast(label){
-    if(REDUCE) return;
-    const r=$("rocketWrap").getBoundingClientRect();
-    const b=document.createElement("div");
-    b.className="ballast";
-    b.style.left=(r.left+r.width*0.3)+"px"; b.style.top=(r.top+r.height*0.7)+"px";
-    b.innerHTML=
-      '<svg width="34" height="38" viewBox="0 0 40 44"><path d="M14 8 L26 8 L23 14 L17 14 Z" fill="#8a6a3e"/>'
-      +'<ellipse cx="20" cy="30" rx="15" ry="13" fill="#C9A56B" stroke="#8a6a3e" stroke-width="2"/>'
-      +'<path d="M14 14 Q20 18 26 14" fill="none" stroke="#8a6a3e" stroke-width="2"/>'
-      +'<text x="20" y="34" font-size="12" fill="#6e5430" text-anchor="middle" font-family="monospace">€</text></svg>'
-      +'<span class="tag">'+esc(label)+'</span>';
-    fx.appendChild(b);
-    const a=b.animate([
-      {transform:"translate(-50%,-50%) translate(0,0) rotate(0deg)",opacity:1},
-      {transform:`translate(-50%,-50%) translate(${-40-Math.random()*40}px, ${120+Math.random()*60}px) rotate(-30deg)`,opacity:0}
-    ],{duration:2200,easing:"cubic-bezier(.4,0,.7,1)",fill:"forwards"});
-    track(a); a.finished.then(()=>b.remove(),()=>b.remove());
-  }
-
-  // ---------- Pause ----------
-  function togglePause(){ if(state.mode==="running") setPaused(!state.paused); }
-  function setPaused(p){
-    state.paused=p;
-    state.anims.forEach(a=> p?a.pause():a.play());
-    pauseInd.classList.toggle("show", p && state.mode==="running");
-    rocketWrap.classList.toggle("is-paused", p && state.mode==="running");
-  }
-
-  // ---------- Zielzustand ----------
-  function complete(){
-    if(state.mode==="complete") return;
-    state.mode="complete";
-    cancelAnimationFrame(state.raf);
-    render(0);
-    document.body.classList.remove("is-critical");
-    document.body.classList.add("is-complete");
-    setPaused(false);
-
-    state.contexts.forEach((c,i)=>{ if(!c.done) migrate(i,true); });
-    inCloudEl.textContent=state.contexts.length;
-
-    rocketWrap.classList.add("liftoff");   // Rakete hebt ab
-    if(!REDUCE){ confetti(); }
-    doneEl.classList.add("show");
-    hintEl.classList.remove("fade");
-  }
-
-  function confetti(){
-    const cols=["#F0C24A","#5C7FC0","#5CD27A","#ffffff","#E8B84B"];
-    for(let i=0;i<48;i++){
-      const c=document.createElement("div");
-      c.className="confetti";
-      c.style.left=(40+Math.random()*20)+"vw";
-      c.style.top="36vh";
-      c.style.background=cols[i%cols.length];
-      fx.appendChild(c);
-      const a=c.animate([
-        {transform:`translate(-50%,-50%) rotate(0deg)`,opacity:1},
-        {transform:`translate(${(Math.random()-0.5)*120}vw, ${50+Math.random()*40}vh) rotate(${Math.random()*720}deg)`,opacity:0}
-      ],{duration:2200+Math.random()*1200,easing:"cubic-bezier(.2,.6,.4,1)",fill:"forwards"});
-      track(a); a.finished.then(()=>c.remove(),()=>c.remove());
-    }
-  }
-
-  // ---------- Pause-Bildschirm (feste Uhrzeit) ----------
-  function setMode(kind){
-    state.kind=kind;
-    const isPause=kind==="pause";
-    modeBtns.forEach(b=>b.setAttribute("aria-selected", String(b.dataset.mode===kind)));
-    countdownFields.classList.toggle("hidden", isPause);
-    pauseFields.classList.toggle("hidden", !isPause);
-    eyebrowLabel.textContent = isPause ? "Workshop-Pause" : "Workshop-Countdown";
-    subEl.textContent = isPause
-      ? "Lege fest, wann es weitergeht \u2013 die Uhrzeit erscheint gro\u00df auf der Leinwand."
-      : "Stelle die Startzeit ein und benenne die Contexts, die in dieser Session abheben.";
-    startLabel.textContent = isPause ? "Pause starten" : "Countdown starten";
-    pauseErr.classList.add("hidden");
-    if(isPause && !state.pausePrefilled){ prefillPauseTime(); state.pausePrefilled=true; }
-  }
-  function prefillPauseTime(){
-    const d=new Date(Date.now()+30*60000);
-    let mi=Math.round(d.getMinutes()/5)*5;
-    if(mi>=60){ mi=0; d.setHours(d.getHours()+1); }
-    hourIn.value=pad(d.getHours()); minuteIn.value=pad(mi);
-  }
-  function showPauseErr(msg){
-    pauseErr.textContent=msg; pauseErr.classList.remove("hidden");
-    clearTimeout(state.pauseErrTimer);
-    state.pauseErrTimer=setTimeout(()=>pauseErr.classList.add("hidden"),3500);
-  }
-  function fmtRemain(ms){
-    const totalSec=Math.ceil(ms/1000);
-    if(totalSec<60) return totalSec+" Sek";
-    let mins=Math.floor(totalSec/60);
-    const hrs=Math.floor(mins/60); mins-=hrs*60;
-    return hrs>0 ? (hrs+" Std "+mins+" Min") : (mins+" Min");
-  }
-  function clockStr(d){ return pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds()); }
-
-  function startPause(){
-    const h=clampInt(hourIn.value,0,23), mi=clampInt(minuteIn.value,0,59);
-    const target=new Date(); target.setHours(h,mi,0,0);
-    if(target.getTime()<=Date.now()){
-      showPauseErr("Diese Uhrzeit liegt schon in der Vergangenheit.");
-      card.classList.remove("shake"); void card.offsetWidth; card.classList.add("shake");
-      return;
-    }
-    state.kind="pause"; state.target=target.getTime();
-    state.label=(anlassIn.value.trim()||"Pause");
-    state.mode="running";
-    state.activeScreen=breakScreen; state.activeHint=bHint;
-
-    bAnlass.textContent="\u2615 "+state.label;          // Kaffee-Symbol + Anlass
-    bLead.textContent="Weiter geht\u2019s um";
-    bTime.textContent=pad(h)+":"+pad(mi);
-    bUhr.classList.remove("hidden");
-    bNow.textContent=clockStr(new Date());
-    bRemain.textContent="noch "+fmtRemain(state.target-Date.now());
-
-    setup.classList.add("hidden");
-    breakScreen.classList.remove("hidden","is-over","soon");
-    document.body.classList.remove("is-critical","is-complete");
-
-    requestFullscreen();
-    requestWakeLock();
-    scheduleHintFade(); armCursorHide();
-    clearInterval(state.breakTimer);
-    state.breakTimer=setInterval(tickPause,500);
-    tickPause();
-  }
-
-  function tickPause(){
-    const now=Date.now();
-    bNow.textContent=clockStr(new Date(now));
-    const rem=state.target-now;
-    if(rem<=0){ pauseReached(); return; }
-    bRemain.textContent="noch "+fmtRemain(rem);
-    breakScreen.classList.toggle("soon", rem<=60000);
-  }
-
-  function pauseReached(){
-    if(state.mode==="complete") return;
-    state.mode="complete";
-    clearInterval(state.breakTimer);
-    breakScreen.classList.remove("soon");
-    breakScreen.classList.add("is-over");
-    bLead.textContent="Pause vorbei";
-    bTime.textContent="JETZT";
-    bUhr.classList.add("hidden");
-    bRemain.textContent="Weiter geht\u2019s! \uD83D\uDE80";
-    if(state.activeHint) state.activeHint.classList.remove("fade");
-    if(!REDUCE) confetti();
-    // Uhr weiterlaufen lassen, bis jemand beendet
-    state.breakTimer=setInterval(()=>{ bNow.textContent=clockStr(new Date()); },1000);
-  }
-
-  // ---------- Reset ----------
-  function reset(){
-    if(state.mode==="setup") return;
-    cancelAnimationFrame(state.raf);
-    clearInterval(state.breakTimer); state.breakTimer=0;
-    clearTimeout(state.hintTimer); clearTimeout(state.cursorTimer);
-    state.anims.forEach(a=>{ try{a.cancel();}catch(_){} });
-    state.anims.clear(); fx.innerHTML="";
-    document.body.classList.remove("is-critical","is-complete");
-    doneEl.classList.remove("show"); pauseInd.classList.remove("show");
-    hintEl.classList.remove("fade"); timer.classList.remove("cursor-hidden");
-    rocketWrap.classList.remove("liftoff","is-paused");
-    breakScreen.classList.remove("is-over","soon","cursor-hidden"); bHint.classList.remove("fade");
-    state.mode="setup"; state.paused=false;
-    timer.classList.add("hidden"); breakScreen.classList.add("hidden"); setup.classList.remove("hidden");
-    exitFullscreen();
-    releaseWakeLock();
-  }
-
-  // ---------- Helfer ----------
-  function track(a){ state.anims.add(a); const off=()=>state.anims.delete(a); a.finished.then(off,off); if(state.paused)a.pause(); return a; }
-  function centerOf(el){ const r=el.getBoundingClientRect(); return {x:r.left+r.width/2, y:r.top+r.height/2}; }
-  function clamp(v,a,b){ return Math.min(b,Math.max(a,v)); }
-  function clampInt(v,a,b){ v=parseInt(v,10); if(isNaN(v))v=0; return clamp(v,a,b); }
-  function esc(s){ return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c])); }
-
-  function requestFullscreen(){
-    const el=document.documentElement, fn=el.requestFullscreen||el.webkitRequestFullscreen;
-    if(fn) try{ const r=fn.call(el); if(r&&r.catch)r.catch(()=>{}); }catch(_){}
-  }
-  function exitFullscreen(){
-    if(document.fullscreenElement||document.webkitFullscreenElement){
-      state.suppressFs=true;
-      const fn=document.exitFullscreen||document.webkitExitFullscreen;
-      if(fn) try{ const r=fn.call(document); if(r&&r.catch)r.catch(()=>{}); }catch(_){}
-      setTimeout(()=>state.suppressFs=false,300);
-    }
-  }
-
-  // ---------- Bildschirm wachhalten (Wake Lock) ----------
-  // Verhindert, dass der Bildschirm waehrend des Timers abdunkelt / in den
-  // Ruhezustand geht. Hinweis: Eine erzwungene Bildschirmsperre per
-  // Unternehmens-Richtlinie (Leerlauf von Maus/Tastatur) kann der Browser
-  // aus Sicherheitsgruenden NICHT umgehen.
-  async function requestWakeLock(){
-    if(!("wakeLock" in navigator)) return;          // aelterer/inkompatibler Browser
-    try{
-      state.wakeLock = await navigator.wakeLock.request("screen");
-      // Gibt das System den Lock selbst frei (z.B. Tab-Wechsel), Referenz leeren
-      state.wakeLock.addEventListener("release", ()=>{ state.wakeLock=null; });
-    }catch(_){ state.wakeLock=null; }               // z.B. abgelehnt / nicht erlaubt
-  }
-  function releaseWakeLock(){
-    if(state.wakeLock){ try{ state.wakeLock.release(); }catch(_){} state.wakeLock=null; }
-  }
-  function onFsChange(){
-    const fs=document.fullscreenElement||document.webkitFullscreenElement;
-    if(!fs && state.mode!=="setup" && !state.suppressFs) reset();
-  }
-  function scheduleHintFade(){ const h=state.activeHint; if(!h) return; clearTimeout(state.hintTimer); h.classList.remove("fade");
-    state.hintTimer=setTimeout(()=>h.classList.add("fade"),4500); }
-  function armCursorHide(){ const sc=state.activeScreen; if(!sc) return; clearTimeout(state.cursorTimer); sc.classList.remove("cursor-hidden");
-    state.cursorTimer=setTimeout(()=>{ if(state.mode!=="setup") sc.classList.add("cursor-hidden"); },3000); }
-
-  // ---------- Events ----------
-  function go(){ state.kind==="pause" ? startPause() : start(); }
-
-  $("start").addEventListener("click", go);
-  modeBtns.forEach(b=> b.addEventListener("click", ()=> setMode(b.dataset.mode)) );
-  document.querySelectorAll(".presets button").forEach(b=> b.addEventListener("click", ()=>{
-    const d=new Date(Date.now()+parseInt(b.dataset.add,10)*60000);
-    hourIn.value=pad(d.getHours()); minuteIn.value=pad(d.getMinutes());
-    pauseErr.classList.add("hidden");
-  }));
-
-  [minIn,secIn,ctxIn].forEach(el=>el.addEventListener("keydown",e=>{
-    if(e.key==="Enter" && !(el===ctxIn && e.shiftKey)){ e.preventDefault(); go(); }
-  }));
-  [hourIn,minuteIn,anlassIn].forEach(el=>el.addEventListener("keydown",e=>{
-    if(e.key==="Enter"){ e.preventDefault(); go(); }
-  }));
-
-  timer.addEventListener("click",()=>{ state.mode==="complete"?reset():togglePause(); });
-  breakScreen.addEventListener("click",()=>{ if(state.mode==="complete") reset(); });
-
-  window.addEventListener("keydown",e=>{
-    if(state.mode==="setup") return;
-    if(state.kind==="pause"){
-      if(e.key==="Escape" || state.mode==="complete"){ e.preventDefault(); reset(); }
-      return;
-    }
-    if(e.code==="Space"){ e.preventDefault(); state.mode==="complete"?reset():togglePause(); }
-    else if(e.key==="Escape"){ reset(); }
-    else if(state.mode==="complete"){ reset(); }
+  $('varmode-seg').querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var b=computeBand(), nm=btn.getAttribute('data-vm');
+      if(nm==='eur') state.varEur=Math.round(b.variabel); else state.varPct=Math.round(b.varPct*10)/10;
+      state.varMode=nm; applyVarModeUI(); render();
+    });
   });
 
-  const onMove=()=>{ if(state.mode!=="setup"){ scheduleHintFade(); armCursorHide(); } };
-  timer.addEventListener("mousemove",onMove);
-  breakScreen.addEventListener("mousemove",onMove);
-  document.addEventListener("fullscreenchange",onFsChange);
-  document.addEventListener("webkitfullscreenchange",onFsChange);
+  bindChips('wait-chips','data-wait','wait');
+  bindChips('hz-chips','data-hz','hz');
+  bindChips('coll-chips','data-delay','collDelay');
 
-  // Das System gibt den Wake Lock bei Tab-Wechsel automatisch frei.
-  // Beim Zurueckkehren erneut anfordern, solange ein Timer laeuft.
-  document.addEventListener("visibilitychange",()=>{
-    if(document.visibilityState==="visible" && state.mode!=="setup" && !state.wakeLock){
-      requestWakeLock();
-    }
+  $('set-break').addEventListener('click',function(){
+    var c=calc(); if(isFinite(c.needLater)){ state.rl=Math.round(c.needLater*12); $('rl').value=state.rl; render(); }
   });
 
-  const preview=()=>{ const m=clampInt(minIn.value,0,599),s=clampInt(secIn.value,0,59); timeEl.textContent=pad(m)+":"+pad(s); };
-  minIn.addEventListener("input",preview); secIn.addEventListener("input",preview); preview();
+  // ---- Speichern (lokal) ----
+  var KEY='gehaltsrechner.v2', flashT;
+  function save(){
+    try{ localStorage.setItem(KEY,JSON.stringify(state));
+      var el=$('store-status'); el.textContent='Gespeichert ✓'; el.classList.add('flash');
+      clearTimeout(flashT); flashT=setTimeout(function(){ el.classList.remove('flash'); el.textContent='Wird lokal auf diesem Gerät gespeichert'; },1100);
+    }catch(e){ $('store-status').textContent='Speichern hier nicht möglich (funktioniert auf deinem Rechner)'; }
+  }
+  function load(){ try{ var s=localStorage.getItem(KEY); if(s){ var o=JSON.parse(s);
+    for(var k in DEFAULTS){ if(o.hasOwnProperty(k)&&o[k]!=null) state[k]=o[k]; } } }catch(e){} }
+
+  function applyStateToUI(){
+    $('cur-level').value=state.curLevel; $('tgt-level').value=state.tgtLevel;
+    $('total').value=Math.round(state.total);
+    $('rn').value=Math.round(state.rn); $('rl').value=Math.round(state.rl);
+    $('coll').value=state.coll;
+    $('infl').value=state.infl;
+    $('etf').value=state.etf;
+    $('last-raise').value=state.lastRaise||'';
+    applyVarModeUI();
+    markChip('wait-chips','data-wait',state.wait);
+    markChip('hz-chips','data-hz',state.hz);
+    markChip('coll-chips','data-delay',state.collDelay);
+  }
+
+  $('reset-btn').addEventListener('click',function(){
+    try{ localStorage.removeItem(KEY); }catch(e){}
+    for(var k in DEFAULTS){ if(DEFAULTS.hasOwnProperty(k)) state[k]=DEFAULTS[k]; }
+    applyStateToUI(); render();
+  });
+
+  // ---- Szenarien (mehrere benannte Stände, lokal) ----
+  var SCEN_KEY='gehaltsrechner.v2.scen';
+  function loadScen(){ try{ var s=localStorage.getItem(SCEN_KEY); return s?JSON.parse(s):[]; }catch(e){ return []; } }
+  function persistScen(list){ try{ localStorage.setItem(SCEN_KEY, JSON.stringify(list)); }catch(e){} }
+  function snapshot(){ var o={}; for(var k in DEFAULTS){ if(DEFAULTS.hasOwnProperty(k)) o[k]=state[k]; } return o; }
+  function saveScenario(name){
+    var list=loadScen();
+    name=(name||'').trim() || ('Szenario '+(list.length+1));
+    list.push({ id:Date.now(), name:name, ts:Date.now(), data:snapshot() });
+    persistScen(list); renderScenList();
+  }
+  function deleteScenario(id){ persistScen(loadScen().filter(function(x){return x.id!==id;})); renderScenList(); }
+  function applyScenario(id){
+    var sc=loadScen().filter(function(x){return x.id===id;})[0]; if(!sc) return;
+    for(var k in DEFAULTS){ if(DEFAULTS.hasOwnProperty(k) && sc.data[k]!=null) state[k]=sc.data[k]; }
+    applyStateToUI(); render();
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  function renderScenList(){
+    var list=loadScen(), wrap=$('scen-list'); wrap.innerHTML='';
+    if(!list.length){ var p=document.createElement('p'); p.className='cap'; p.style.margin='0';
+      p.textContent='Noch keine Szenarien gespeichert.'; wrap.appendChild(p); return; }
+    list.slice().reverse().forEach(function(sc){
+      var row=document.createElement('div'); row.className='scen';
+      var info=document.createElement('div');
+      var nm=document.createElement('div'); nm.className='scen-name'; nm.textContent=sc.name;
+      var meta=document.createElement('div'); meta.className='scen-meta';
+      var d=new Date(sc.ts);
+      meta.textContent='gespeichert '+d.toLocaleDateString('de-DE')+' · '+d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr';
+      info.appendChild(nm); info.appendChild(meta);
+      var act=document.createElement('div'); act.className='scen-act';
+      var bL=document.createElement('button'); bL.textContent='Laden'; bL.onclick=function(){ applyScenario(sc.id); };
+      var bD=document.createElement('button'); bD.textContent='Löschen'; bD.className='del';
+      bD.onclick=function(){ if(confirm('Szenario „'+sc.name+'" löschen?')) deleteScenario(sc.id); };
+      act.appendChild(bL); act.appendChild(bD);
+      row.appendChild(info); row.appendChild(act); wrap.appendChild(row);
+    });
+  }
+  $('scen-save').addEventListener('click',function(){ saveScenario($('scen-name').value); $('scen-name').value=''; });
+
+  var rt; window.addEventListener('resize',function(){ clearTimeout(rt); rt=setTimeout(render,120); });
+
+  load(); applyStateToUI(); renderScenList(); render();
 })();
 </script>
 </body>
